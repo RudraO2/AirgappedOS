@@ -12,7 +12,7 @@
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { TOOL_DEFINITIONS } from "../src/faraday/tools/definitions.js";
-import { systemPromptFor } from "./_prompts.js";
+import { systemPromptFor } from "./_prompts";
 
 const MEMBERS = {
 	vision: () => process.env.FARADAY_MODEL_VISION ?? "claude-haiku-4-5-20251001",

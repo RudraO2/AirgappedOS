@@ -181,6 +181,7 @@ src/faraday/components/          RoutingChip, SealRow, SovereigntyDrawer, SealBa
 src/faraday/store.ts             sessions, events, seal mirror, drawer state
 src/faraday/turn.ts              classify → score → stream → tool loop
 src/faraday/tools/definitions.js the tool schemas (shared with api/turn.ts)
+api/_prompts.ts                  the system prompts, one per member — server-side, never in the bundle
 src/faraday/tools/execute.ts     the waterfall (ported policy) + tool bodies landing on the OS
 src/faraday/lib/                 router/, egress/policy.js (verbatim from index.js), egress/seal.js,
                                  deliverables/{audit-trail,docx}.js, registry/fleet.js, trace/turn.js
