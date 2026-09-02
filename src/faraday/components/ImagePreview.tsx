@@ -20,10 +20,14 @@ export function ImagePreview() {
 			aria-label="Attached image preview"
 			className="fade-in"
 			onClick={() => setPreviewImage(null)}
-			style={{ position: "absolute", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.55)", display: "grid", placeItems: "center", padding: 32 }}
+			style={{ position: "absolute", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: "36px 40px 44px" }}
 		>
-			<div onClick={(e) => e.stopPropagation()} style={{ position: "relative", maxWidth: "90%", maxHeight: "90%", display: "flex", flexDirection: "column", background: "var(--bg-layer-1)", borderRadius: 12, padding: 10, boxShadow: "var(--shadow-window)", border: "1px solid var(--border-l2)" }}>
-				<img src={url} alt="Attached image" style={{ display: "block", flex: "1 1 auto", minHeight: 0, maxWidth: "100%", objectFit: "contain", borderRadius: 6, background: "#ffffff" }} />
+			{/* The frame takes a definite height from the overlay, so the image's max-height resolves against it. */}
+			<div
+				onClick={(e) => e.stopPropagation()}
+				style={{ position: "relative", height: "100%", maxWidth: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-layer-1)", borderRadius: 12, padding: 10, boxShadow: "var(--shadow-window)", border: "1px solid var(--border-l2)" }}
+			>
+				<img src={url} alt="Attached image" style={{ display: "block", maxHeight: "100%", maxWidth: "100%", width: "auto", height: "auto", objectFit: "contain", borderRadius: 6, background: "#ffffff" }} />
 				<button
 					onClick={() => setPreviewImage(null)}
 					aria-label="Close preview"
@@ -32,7 +36,9 @@ export function ImagePreview() {
 				>
 					×
 				</button>
-				<div style={{ fontSize: 11.5, color: "var(--label-tertiary)", textAlign: "center", marginTop: 6 }}>Attached image · sent to the vision member as pixels · click outside or press Esc to close</div>
+			</div>
+			<div style={{ position: "absolute", left: 0, right: 0, bottom: 14, textAlign: "center", fontSize: 11.5, color: "rgba(255,255,255,0.75)", pointerEvents: "none" }}>
+				Attached image · sent to the vision member as pixels · click outside or press Esc to close
 			</div>
 		</div>
 	);
