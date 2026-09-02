@@ -2,6 +2,7 @@ import type { AppProps } from "../os/kernel/apps";
 import { launch } from "../os/kernel/launch";
 import { Hero, RingedMark, Wordmark } from "./components/Brand";
 import { Composer, SuggestedPrompts } from "./components/Composer";
+import { ImagePreview } from "./components/ImagePreview";
 import { Overlays } from "./components/SealBand";
 import { SealRow } from "./components/SealRow";
 import { SovereigntyDrawer } from "./components/SovereigntyDrawer";
@@ -99,6 +100,7 @@ export function Faraday(_: AppProps) {
 					</>
 				)}
 				<SovereigntyDrawer />
+				<ImagePreview />
 			</main>
 		</div>
 	);

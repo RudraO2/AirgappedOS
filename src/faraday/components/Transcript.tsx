@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { downloadNode } from "../../os/apps/Explorer";
 import { useOS } from "../../os/kernel/store";
 import { displayFor } from "../lib/registry/fleet.js";
-import type { Block, Turn } from "../store";
+import { useFaraday, type Block, type Turn } from "../store";
 import { StateDot } from "./ui";
 
 export function Transcript({ turns }: { turns: Turn[] }) {
@@ -21,12 +21,17 @@ export function Transcript({ turns }: { turns: Turn[] }) {
 }
 
 function UserTurn({ turn }: { turn: Extract<Turn, { role: "user" }> }) {
+	const setPreviewImage = useFaraday((s) => s.setPreviewImage);
 	return (
 		<div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
 			{turn.image && (
-				<a href={turn.image.url} target="_blank" rel="noreferrer" title="Open the full-size original">
-					<img src={turn.image.url} alt="Attached image" style={{ maxHeight: 200, maxWidth: 320, borderRadius: 10, border: "1px solid var(--border-l1)", display: "block" }} />
-				</a>
+				<img
+					src={turn.image.url}
+					alt="Attached image — click to preview"
+					title="Click to preview"
+					onClick={() => setPreviewImage(turn.image!.url)}
+					style={{ maxHeight: 200, maxWidth: 320, borderRadius: 10, border: "1px solid var(--border-l1)", display: "block", cursor: "zoom-in" }}
+				/>
 			)}
 			<div style={{ background: "var(--bg-layer-2)", borderRadius: 18, padding: "10px 16px", fontSize: 15, lineHeight: 1.5, maxWidth: "80%", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{turn.text}</div>
 		</div>

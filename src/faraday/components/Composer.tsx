@@ -10,6 +10,7 @@ export function Composer({ hero }: { hero: boolean }) {
 	const busy = useFaraday((s) => s.busy);
 	const pendingImage = useFaraday((s) => s.pendingImage);
 	const setPendingImage = useFaraday((s) => s.setPendingImage);
+	const setPreviewImage = useFaraday((s) => s.setPreviewImage);
 	const [text, setText] = useState("");
 	const [menuOpen, setMenuOpen] = useState(false);
 	const [loadingSample, setLoadingSample] = useState<string | null>(null);
@@ -89,12 +90,25 @@ export function Composer({ hero }: { hero: boolean }) {
 			}}
 		>
 			{pendingImage && (
-				<div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-					<img src={pendingImage.url} alt="Attached image" style={{ height: 56, borderRadius: 6, border: "1px solid var(--border-l1)" }} />
+				<div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+					<span style={{ position: "relative", display: "inline-block" }}>
+						<img
+							src={pendingImage.url}
+							alt="Attached image — click to preview"
+							title="Click to preview"
+							onClick={() => setPreviewImage(pendingImage.url)}
+							style={{ height: 72, maxWidth: 160, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border-l2)", display: "block", cursor: "zoom-in" }}
+						/>
+						<button
+							onClick={() => setPendingImage(null)}
+							aria-label="Remove the attached image"
+							title="Remove"
+							style={{ position: "absolute", top: -7, right: -7, width: 20, height: 20, borderRadius: "50%", background: "var(--label-primary)", color: "var(--bg-layer-1)", fontSize: 13, lineHeight: 1, display: "grid", placeItems: "center", boxShadow: "var(--shadow-lv2)" }}
+						>
+							×
+						</button>
+					</span>
 					<span style={{ fontSize: 12, color: "var(--label-secondary)" }}>Attached image — goes to the vision member as pixels.</span>
-					<button onClick={() => setPendingImage(null)} aria-label="Remove the attached image" style={{ color: "var(--label-tertiary)", marginLeft: "auto", fontSize: 16 }}>
-						×
-					</button>
 				</div>
 			)}
 			<textarea

@@ -61,6 +61,7 @@ interface FaradayState {
 	drawerWidth: number;
 	busy: boolean;
 	pendingImage: PendingImage | null;
+	previewImage: string | null;
 	lastDenial: { seq: number; tool: string; target: string; at: number } | null;
 	current(): Session;
 	newSession(): void;
@@ -73,6 +74,7 @@ interface FaradayState {
 	setDrawerWidth(px: number): void;
 	setBusy(v: boolean): void;
 	setPendingImage(img: PendingImage | null): void;
+	setPreviewImage(url: string | null): void;
 	clearDenial(): void;
 }
 
@@ -113,6 +115,7 @@ export const useFaraday = create<FaradayState>((set, get) => ({
 	drawerWidth: savedWidth,
 	busy: false,
 	pendingImage: null,
+	previewImage: null,
 	lastDenial: null,
 	current: () => {
 		const s = get();
@@ -158,6 +161,7 @@ export const useFaraday = create<FaradayState>((set, get) => ({
 	},
 	setBusy: (v) => set({ busy: v }),
 	setPendingImage: (img) => set({ pendingImage: img }),
+	setPreviewImage: (url) => set({ previewImage: url }),
 	clearDenial: () => set({ lastDenial: null }),
 }));
 
