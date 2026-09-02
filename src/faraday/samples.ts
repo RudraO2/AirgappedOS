@@ -43,10 +43,9 @@ async function bitmapToPending(bitmap: ImageBitmap, mediaType: "image/png" | "im
 	canvas.width = Math.max(1, Math.round(bitmap.width * scale));
 	canvas.height = Math.max(1, Math.round(bitmap.height * scale));
 	const g = canvas.getContext("2d")!;
-	if (mediaType === "image/jpeg") {
-		g.fillStyle = "#ffffff";
-		g.fillRect(0, 0, canvas.width, canvas.height);
-	}
+	// Always on white: a transparent drawing is unreadable on a dark theme and no better for the model.
+	g.fillStyle = "#ffffff";
+	g.fillRect(0, 0, canvas.width, canvas.height);
 	g.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
 	const url = canvas.toDataURL(mediaType, 0.9);
 	return { url, mediaType, base64: url.slice(url.indexOf(",") + 1) };

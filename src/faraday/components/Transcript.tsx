@@ -30,7 +30,7 @@ function UserTurn({ turn }: { turn: Extract<Turn, { role: "user" }> }) {
 					alt="Attached image — click to preview"
 					title="Click to preview"
 					onClick={() => setPreviewImage(turn.image!.url)}
-					style={{ maxHeight: 200, maxWidth: 320, borderRadius: 10, border: "1px solid var(--border-l1)", display: "block", cursor: "zoom-in" }}
+					style={{ maxHeight: 200, maxWidth: 320, borderRadius: 10, border: "1px solid var(--border-l1)", display: "block", cursor: "zoom-in", background: "#ffffff" }}
 				/>
 			)}
 			<div style={{ background: "var(--bg-layer-2)", borderRadius: 18, padding: "10px 16px", fontSize: 15, lineHeight: 1.5, maxWidth: "80%", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{turn.text}</div>

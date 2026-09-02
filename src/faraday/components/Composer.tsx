@@ -97,7 +97,7 @@ export function Composer({ hero }: { hero: boolean }) {
 							alt="Attached image — click to preview"
 							title="Click to preview"
 							onClick={() => setPreviewImage(pendingImage.url)}
-							style={{ height: 72, maxWidth: 160, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border-l2)", display: "block", cursor: "zoom-in" }}
+							style={{ height: 72, maxWidth: 160, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border-l2)", display: "block", cursor: "zoom-in", background: "#ffffff" }}
 						/>
 						<button
 							onClick={() => setPendingImage(null)}
