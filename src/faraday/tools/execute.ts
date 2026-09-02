@@ -72,8 +72,14 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
 				return { content: `Opened ${url} in the workstation's browser. The page is on screen; you cannot read its contents from here.`, status: "done" };
 			}
 			case "read_file": {
-				const path = normalizePath(String(input.path ?? ""), HOME);
 				const fs = os.get().fs;
+				let path = normalizePath(String(input.path ?? ""), HOME);
+				// A small model often knows the file's name but not its folder: resolve by name before failing.
+				if (!fs.exists(path)) {
+					const found = fs.find(String(input.path ?? ""));
+					if (found) path = found;
+					else throw new Error(`Cannot find path '${path}'. Documents holds: ${fs.list(`${HOME}\Documents`).map((n) => n.name + (n.kind === "dir" ? "\\" : "")).join(", ")}`);
+				}
 				const text = fs.readText(path);
 				launch("explorer", { path: path.slice(0, path.lastIndexOf("\\")), highlight: path.slice(path.lastIndexOf("\\") + 1) });
 				recordTool(name, { outcome: `read ${path}` });
@@ -89,8 +95,9 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
 				return { content: `Written ${content.length} characters to ${path}.`, status: "done" };
 			}
 			case "open_file": {
-				const path = normalizePath(String(input.path ?? ""), HOME);
-				if (!os.get().fs.exists(path)) throw new Error(`Cannot find path [object Object] because it does not exist.`);
+				let path = normalizePath(String(input.path ?? ""), HOME);
+				if (!os.get().fs.exists(path)) path = os.get().fs.find(String(input.path ?? "")) ?? path;
+				if (!os.get().fs.exists(path)) throw new Error(`Cannot find path '${path}' because it does not exist.`);
 				openFile(path);
 				recordTool(name, { outcome: `opened ${path}` });
 				return { content: `Opened ${path} on screen.`, status: "done" };

@@ -36,7 +36,7 @@ export const TOOL_DEFINITIONS = [
 	},
 	{
 		name: "read_file",
-		description: "Read a text file from the workstation. Paths are Windows-style, e.g. C:\Users\Operator\Documents\report.txt",
+		description: "Read a text file from the workstation. Paths are Windows-style. The inspection report is C:\Users\Operator\Documents\Inspection reports\NRC-RVF-INSP-2026-0417.txt. A bare file name is found anywhere on the workstation.",
 		input_schema: {
 			type: "object",
 			properties: { path: { type: "string" } },

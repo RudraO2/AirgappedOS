@@ -35,7 +35,7 @@ export const SUGGESTED_PROMPTS: SuggestedPrompt[] = [
 	{ label: "Produce the approval note", text: "Generate the approval note for the PSV-2207A non-conformance, citing the inspection report NRC/RVF/INSP/2026-0417." },
 ];
 
-const MAX_EDGE = 1568;
+const MAX_EDGE = 1024;
 
 async function bitmapToPending(bitmap: ImageBitmap, mediaType: "image/png" | "image/jpeg"): Promise<PendingImage> {
 	const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
