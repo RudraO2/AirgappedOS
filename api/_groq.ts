@@ -104,7 +104,7 @@ export async function streamGroq(
 	if (response.status === 429) {
 		// Free tier meters tokens per minute; wait the time it names (capped) and try once more.
 		const detail = await response.text().catch(() => "");
-		const wait = Math.min(25, Number(/try again in ([d.]+)s/i.exec(detail)?.[1] ?? 10) + 1);
+		const wait = Math.min(25, Number(/try again in ([\d.]+)s/i.exec(detail)?.[1] ?? 10) + 1);
 		await new Promise((r) => setTimeout(r, wait * 1000));
 		response = await request();
 	}
