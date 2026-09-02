@@ -118,7 +118,7 @@ function TaskButton({ label, active, running, onClick, children }: { label: stri
 			{running && (
 				<span
 					aria-hidden
-					style={{ position: "absolute", bottom: 2, left: "50%", transform: "translateX(-50%)", width: active ? 16 : 6, height: 3, borderRadius: 2, background: active ? "var(--accent)" : "var(--label-tertiary)", transition: "width 120ms ease" }}
+					style={{ position: "absolute", bottom: 2, left: "50%", width: 16, height: 3, borderRadius: 2, background: active ? "var(--accent)" : "var(--label-tertiary)", transform: `translateX(-50%) scaleX(${active ? 1 : 0.375})`, transition: "transform 120ms ease" }}
 				/>
 			)}
 		</button>
