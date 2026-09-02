@@ -93,12 +93,21 @@ export async function streamGroq(
 		tools: TOOL_DEFINITIONS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } })),
 		tool_choice: "auto",
 	};
-	const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-		method: "POST",
-		headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
-		body: JSON.stringify(body),
-		signal: options.signal,
-	});
+	const request = () =>
+		fetch("https://api.groq.com/openai/v1/chat/completions", {
+			method: "POST",
+			headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+			body: JSON.stringify(body),
+			signal: options.signal,
+		});
+	let response = await request();
+	if (response.status === 429) {
+		// Free tier meters tokens per minute; wait the time it names (capped) and try once more.
+		const detail = await response.text().catch(() => "");
+		const wait = Math.min(25, Number(/try again in ([d.]+)s/i.exec(detail)?.[1] ?? 10) + 1);
+		await new Promise((r) => setTimeout(r, wait * 1000));
+		response = await request();
+	}
 	if (!response.ok || !response.body) {
 		const detail = await response.text().catch(() => "");
 		throw new Error(`Groq ${response.status}: ${detail.slice(0, 300)}`);

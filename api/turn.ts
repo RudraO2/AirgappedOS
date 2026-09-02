@@ -63,7 +63,7 @@ export default async function handler(req: Request): Promise<Response> {
 			};
 			const viaGroq = async (reason: string) => {
 				send({ type: "fallback", provider: "groq", model: GROQ_MODELS[member](), reason });
-				const result = await streamGroq(member, system, messages, send, { allowImages: false });
+				const result = await streamGroq(member, systemPromptFor(member, new Date(), { compact: true }), messages, send, { allowImages: false });
 				send({ type: "done", stop_reason: result.stop_reason, content: result.content, model: result.model, provider: "groq" });
 			};
 			try {
