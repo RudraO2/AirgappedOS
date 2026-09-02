@@ -29,7 +29,9 @@ export function normalizeUrl(input: string): string {
 	if (t === "" || t === HOME_URL) return HOME_URL;
 	if (/^[a-z][a-z0-9+.-]*:/i.test(t)) return t;
 	if (/^[\w.-]+\.[a-z]{2,}(?:[/:?#]|$)/i.test(t) || /^localhost/i.test(t)) return "https://" + t;
-	return "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(t);
+	// Bing: allows embedding and renders results server-side. Google forbids embedding and
+	// serves only a JavaScript shell to a relay, so its results cannot be shown in a frame.
+	return "https://www.bing.com/search?q=" + encodeURIComponent(t);
 }
 
 export function titleFor(url: string): string {
