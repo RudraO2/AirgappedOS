@@ -69,6 +69,7 @@ export function Window({ win }: { win: WindowState }) {
 			}}
 			style={{
 				position: "absolute",
+				pointerEvents: "auto",
 				...frame,
 				zIndex: win.z,
 				display: win.minimized ? "none" : "flex",
