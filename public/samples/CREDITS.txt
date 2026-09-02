@@ -1,0 +1,6 @@
+Sample images bundled for the demo. Both from Wikimedia Commons.
+
+pid-pump-tank.png     "Pump with tank pid en.svg" by Con-struct, CC BY-SA 3.0
+                      https://commons.wikimedia.org/wiki/File:Pump_with_tank_pid_en.svg
+pid-process-unit.jpg  "Schéma P&ID.jpg" by Evinfo, CC BY-SA 3.0
+                      https://commons.wikimedia.org/wiki/File:Sch%C3%A9ma_P%26ID.jpg

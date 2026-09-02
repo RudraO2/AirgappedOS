@@ -1,23 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { loadSample, prepareImageFile, SAMPLE_IMAGES, SUGGESTED_PROMPTS as SUGGESTED_PROMPTS_LIST } from "../samples";
 import { useFaraday } from "../store";
 import { runTurn } from "../turn";
 import { RoutingChip } from "./RoutingChip";
 
 const ATTACH_ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
-const MAX_EDGE = 640;
-
-/** Resize to the prototype's measured 640×640 budget and return base64 + a preview URL. */
-async function prepareImage(file: File): Promise<{ base64: string; mediaType: string; url: string }> {
-	const bitmap = await createImageBitmap(file);
-	const scale = Math.min(1, MAX_EDGE / Math.max(bitmap.width, bitmap.height));
-	const canvas = document.createElement("canvas");
-	canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-	canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-	canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-	const mediaType = file.type === "image/png" || file.type === "image/gif" ? "image/png" : "image/jpeg";
-	const url = canvas.toDataURL(mediaType, 0.88);
-	return { base64: url.slice(url.indexOf(",") + 1), mediaType, url };
-}
 
 export function Composer({ hero }: { hero: boolean }) {
 	const busy = useFaraday((s) => s.busy);
@@ -25,6 +12,7 @@ export function Composer({ hero }: { hero: boolean }) {
 	const setPendingImage = useFaraday((s) => s.setPendingImage);
 	const [text, setText] = useState("");
 	const [menuOpen, setMenuOpen] = useState(false);
+	const [loadingSample, setLoadingSample] = useState<string | null>(null);
 	const fileRef = useRef<HTMLInputElement>(null);
 	const areaRef = useRef<HTMLTextAreaElement>(null);
 	const menuRef = useRef<HTMLDivElement>(null);
@@ -40,7 +28,18 @@ export function Composer({ hero }: { hero: boolean }) {
 
 	const attach = async (file: File | null | undefined) => {
 		if (!file || !ATTACH_ACCEPT.split(",").includes(file.type)) return;
-		setPendingImage(await prepareImage(file));
+		setPendingImage(await prepareImageFile(file));
+	};
+
+	const attachSample = async (id: string) => {
+		setMenuOpen(false);
+		setLoadingSample(id);
+		try {
+			setPendingImage(await loadSample(id));
+			areaRef.current?.focus();
+		} finally {
+			setLoadingSample(null);
+		}
 	};
 
 	const send = () => {
@@ -49,6 +48,20 @@ export function Composer({ hero }: { hero: boolean }) {
 		setText("");
 		void runTurn(t, pendingImage ?? undefined);
 	};
+
+	const menuItem = (label: string, onClick: () => void, hint?: string) => (
+		<button
+			key={label}
+			role="menuitem"
+			onClick={onClick}
+			style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 10px", borderRadius: 6, fontSize: 13 }}
+			onPointerEnter={(e) => (e.currentTarget.style.background = "var(--interactive-hover)")}
+			onPointerLeave={(e) => (e.currentTarget.style.background = "")}
+		>
+			{label}
+			{hint && <span style={{ display: "block", fontSize: 11.5, color: "var(--label-tertiary)", marginTop: 1 }}>{hint}</span>}
+		</button>
+	);
 
 	return (
 		<div
@@ -107,22 +120,17 @@ export function Composer({ hero }: { hero: boolean }) {
 						onClick={() => setMenuOpen((v) => !v)}
 						style={{ width: 28, height: 28, borderRadius: 999, background: "var(--selector)", display: "grid", placeItems: "center", fontSize: 18, lineHeight: 1, color: "var(--label-primary)" }}
 					>
-						+
+						{loadingSample ? <span style={{ width: 12, height: 12, borderRadius: "50%", border: "2px solid var(--border-l3)", borderTopColor: "var(--label-primary)", animation: "spin 900ms linear infinite" }} /> : "+"}
 					</button>
 					{menuOpen && (
-						<div role="menu" className="fade-up" style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, minWidth: 200, background: "var(--bg-layer-1)", border: "1px solid var(--border-l2)", borderRadius: 10, boxShadow: "var(--shadow-lv2)", padding: 6, zIndex: 50 }}>
-							<button
-								role="menuitem"
-								onClick={() => {
-									setMenuOpen(false);
-									fileRef.current?.click();
-								}}
-								style={{ display: "block", width: "100%", textAlign: "left", padding: "8px 10px", borderRadius: 6, fontSize: 13 }}
-								onPointerEnter={(e) => (e.currentTarget.style.background = "var(--interactive-hover)")}
-								onPointerLeave={(e) => (e.currentTarget.style.background = "")}
-							>
-								Attach an image
-							</button>
+						<div role="menu" className="fade-up" style={{ position: "absolute", bottom: "calc(100% + 8px)", left: 0, minWidth: 300, background: "var(--bg-layer-1)", border: "1px solid var(--border-l2)", borderRadius: 10, boxShadow: "var(--shadow-lv2)", padding: 6, zIndex: 50 }}>
+							{menuItem("Attach an image", () => {
+								setMenuOpen(false);
+								fileRef.current?.click();
+							}, "PNG, JPEG, WebP or GIF from this computer")}
+							<div style={{ borderTop: "1px solid var(--border-l1)", margin: "6px 4px" }} />
+							<div style={{ padding: "4px 10px 2px", fontSize: 11, color: "var(--label-tertiary)", letterSpacing: "0.08em", textTransform: "uppercase" }}>Samples to try</div>
+							{SAMPLE_IMAGES.map((s) => menuItem(s.label, () => void attachSample(s.id), s.hint))}
 						</div>
 					)}
 					<input ref={fileRef} type="file" accept={ATTACH_ACCEPT} style={{ display: "none" }} tabIndex={-1} aria-hidden onChange={(e) => void attach(e.target.files?.[0])} />
@@ -142,6 +150,51 @@ export function Composer({ hero }: { hero: boolean }) {
 					<svg width="14" height="14" viewBox="0 0 16 16" aria-hidden><path d="M8 13V3M4 7l4-4 4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
 				</button>
 			</div>
+		</div>
+	);
+}
+
+/** Ready-made prompts under the composer on a new session. A chip runs the turn, attaching a sample image when the prompt needs one. */
+export function SuggestedPrompts() {
+	const busy = useFaraday((s) => s.busy);
+	const [loading, setLoading] = useState<string | null>(null);
+	return (
+		<div style={{ width: "100%", maxWidth: 780, display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
+			{SUGGESTED_PROMPTS_LIST.map((p) => (
+				<button
+					key={p.label}
+					disabled={busy || loading !== null}
+					title={p.text}
+					onClick={async () => {
+						setLoading(p.label);
+						try {
+							const image = p.image ? await loadSample(p.image) : undefined;
+							void runTurn(p.text, image);
+						} finally {
+							setLoading(null);
+						}
+					}}
+					style={{
+						padding: "7px 12px",
+						borderRadius: 999,
+						border: "1px solid var(--border-l2)",
+						background: "var(--bg-layer-2)",
+						fontSize: 12.5,
+						color: "var(--label-primary)",
+						opacity: busy ? 0.6 : 1,
+						display: "inline-flex",
+						alignItems: "center",
+						gap: 6,
+					}}
+					onPointerEnter={(e) => (e.currentTarget.style.background = "var(--interactive-hover)")}
+					onPointerLeave={(e) => (e.currentTarget.style.background = "var(--bg-layer-2)")}
+				>
+					{p.image && (
+						<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden><rect x="1.5" y="3" width="13" height="10" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.2" /><path d="M3 12l3.5-4 2.5 3 2-2 2.5 3" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" /></svg>
+					)}
+					{loading === p.label ? "Attaching…" : p.label}
+				</button>
+			))}
 		</div>
 	);
 }

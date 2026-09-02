@@ -1,7 +1,7 @@
 import type { AppProps } from "../os/kernel/apps";
 import { launch } from "../os/kernel/launch";
 import { Hero, RingedMark, Wordmark } from "./components/Brand";
-import { Composer } from "./components/Composer";
+import { Composer, SuggestedPrompts } from "./components/Composer";
 import { Overlays } from "./components/SealBand";
 import { SealRow } from "./components/SealRow";
 import { SovereigntyDrawer } from "./components/SovereigntyDrawer";
@@ -88,6 +88,7 @@ export function Faraday(_: AppProps) {
 							</span>
 						</div>
 						<Composer hero />
+						<SuggestedPrompts />
 					</div>
 				) : (
 					<>
