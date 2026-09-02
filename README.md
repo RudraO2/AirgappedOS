@@ -6,7 +6,7 @@
 > GPU, nothing leaves the machine. The router, the seal's refusals and record, and the signed `.docx`
 > are the same code; only the fleet and the machine are simulated.
 >
-> **Run the real one locally:** https://github.com/RudraO2/blind-flange — Windows 10/11 64-bit,
+> **Run the real one locally:** https://github.com/RudraO2/Faraday — Windows 10/11 64-bit,
 > NVIDIA GPU with 4 GB VRAM (built on a GTX 1650 Max-Q, Vulkan, no CUDA), 16 GB RAM, ~4 GB disk for
 > the two Apache-2.0 Qwen models, Node 22.15+, pnpm 10.11+. Clone, double-click `run.bat`.
 
