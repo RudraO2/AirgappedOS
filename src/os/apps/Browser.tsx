@@ -13,6 +13,18 @@ export function Browser({ windowId, nonce }: AppProps) {
 		if (tabs.length === 0) openTab();
 	}, [tabs.length, openTab, nonce]);
 	useEffect(() => {
+		// Links clicked inside a relayed page ask the browser to navigate the tab.
+		const onMessage = (e: MessageEvent) => {
+			const data = e.data as { type?: string; url?: string };
+			if (data?.type === "faraday-navigate" && typeof data.url === "string") {
+				const current = useBrowser.getState();
+				if (current.active !== null) current.navigate(current.active, data.url);
+			}
+		};
+		window.addEventListener("message", onMessage);
+		return () => window.removeEventListener("message", onMessage);
+	}, []);
+	useEffect(() => {
 		setAddress(tab?.url === HOME_URL ? "" : (tab?.url ?? ""));
 	}, [tab?.url, tab?.loadedAt]);
 	useEffect(() => {
@@ -86,18 +98,62 @@ export function Browser({ windowId, nonce }: AppProps) {
 			</div>
 			<div style={{ flex: 1, minHeight: 0, background: "#fff", position: "relative" }}>
 				{tab && tab.url === HOME_URL && <HomePage onGo={(u) => navigate(tab.id, u)} />}
-				{tab && tab.url !== HOME_URL && (
-					<iframe
-						key={`${tab.id}-${tab.loadedAt}`}
-						title={tab.title}
-						src={tab.url}
-						sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
-						referrerPolicy="no-referrer"
-						style={{ width: "100%", height: "100%", border: "none", display: "block", background: "#fff" }}
-					/>
-				)}
+				{tab && tab.url !== HOME_URL && <Frame key={`${tab.id}-${tab.loadedAt}`} url={tab.url} title={tab.title} />}
 			</div>
 		</div>
+	);
+}
+
+type FrameMode = { kind: "probing" } | { kind: "direct" } | { kind: "relay" };
+
+/**
+ * Decides how to show a page. A site that allows embedding loads directly, so
+ * the request leaves the judge's own tab. A site that refuses (WhatsApp,
+ * Google, GitHub) is fetched by the workstation's page relay, which strips
+ * the embedding ban. Either way the request really leaves this machine.
+ */
+function Frame({ url, title }: { url: string; title: string }) {
+	const [mode, setMode] = useState<FrameMode>({ kind: "probing" });
+	useEffect(() => {
+		let cancelled = false;
+		setMode({ kind: "probing" });
+		fetch(`/api/probe?url=${encodeURIComponent(url)}`)
+			.then((r) => r.json())
+			.then((p: { ok?: boolean; framable?: boolean }) => {
+				if (cancelled) return;
+				setMode({ kind: p.ok !== false && p.framable ? "direct" : "relay" });
+			})
+			.catch(() => {
+				if (!cancelled) setMode({ kind: "relay" });
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [url]);
+
+	if (mode.kind === "probing") {
+		return (
+			<div style={{ height: "100%", display: "grid", placeItems: "center", background: "var(--bg-layer-1)", color: "var(--label-tertiary)", fontSize: 13 }}>
+				<div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+					<span style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid var(--border-l3)", borderTopColor: "var(--label-primary)", animation: "spin 900ms linear infinite" }} />
+					Connecting to {title}…
+				</div>
+			</div>
+		);
+	}
+	const src = mode.kind === "direct" ? url : `/api/proxy?url=${encodeURIComponent(url)}`;
+	return (
+		<>
+			<iframe title={title} src={src} sandbox="allow-scripts allow-same-origin allow-forms allow-popups" referrerPolicy="no-referrer" style={{ width: "100%", height: "100%", border: "none", display: "block", background: "#fff" }} />
+			{mode.kind === "relay" && (
+				<div
+					title="This site refuses to be embedded, so the workstation's page relay fetched it and is showing what came back."
+					style={{ position: "absolute", right: 10, bottom: 8, fontSize: 11, padding: "3px 8px", borderRadius: 999, background: "var(--bg-layer-2)", border: "1px solid var(--border-l2)", color: "var(--label-secondary)", pointerEvents: "none" }}
+				>
+					shown through the page relay
+				</div>
+			)}
+		</>
 	);
 }
 
@@ -125,17 +181,18 @@ function HomePage({ onGo }: { onGo: (url: string) => void }) {
 			</form>
 			<div style={{ display: "flex", gap: 12, flexWrap: "wrap", justifyContent: "center" }}>
 				{[
-					["example.com", "https://example.com"],
 					["Wikipedia", "https://en.wikipedia.org"],
-					["MDN", "https://developer.mozilla.org"],
+					["BBC News", "https://www.bbc.com/news"],
+					["MRPL", "https://www.mrpl.co.in"],
+					["example.com", "https://example.com"],
 				].map(([label, url]) => (
 					<button key={url} onClick={() => onGo(url)} style={{ padding: "10px 16px", borderRadius: 8, background: "var(--bg-layer-1)", border: "1px solid var(--border-l1)", fontSize: 12 }}>
 						{label}
 					</button>
 				))}
 			</div>
-			<div style={{ fontSize: 11, color: "var(--label-tertiary)", maxWidth: 520, textAlign: "center", lineHeight: 1.5 }}>
-				This browser shows pages inside a frame. Some sites refuse to be framed and show a blank page; the request still leaves this machine.
+			<div style={{ fontSize: 11, color: "var(--label-tertiary)", maxWidth: 560, textAlign: "center", lineHeight: 1.5 }}>
+				Sites that allow embedding load directly from your tab. Sites that refuse are fetched by the workstation's page relay and shown as they came back. Sites that need a login, a websocket or their own scripts (WhatsApp Web, Gmail) cannot be rendered inside any other page.
 			</div>
 		</div>
 	);

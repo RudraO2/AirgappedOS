@@ -29,7 +29,7 @@ export function normalizeUrl(input: string): string {
 	if (t === "" || t === HOME_URL) return HOME_URL;
 	if (/^[a-z][a-z0-9+.-]*:/i.test(t)) return t;
 	if (/^[\w.-]+\.[a-z]{2,}(?:[/:?#]|$)/i.test(t) || /^localhost/i.test(t)) return "https://" + t;
-	return "https://duckduckgo.com/?q=" + encodeURIComponent(t);
+	return "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(t);
 }
 
 export function titleFor(url: string): string {
