@@ -14,7 +14,7 @@ import { Desktop } from "./os/shell/Desktop";
 import { Faraday } from "./faraday/Faraday";
 
 registerApp({ id: "faraday", title: "Faraday", component: Faraday, w: 1180, h: 760, singleton: true, pinned: true, desktop: true });
-registerApp({ id: "explorer", title: "File Explorer", component: Explorer, w: 860, h: 540, pinned: true, desktop: true });
+registerApp({ id: "explorer", title: "File Explorer", component: Explorer, w: 860, h: 540, singleton: true, pinned: true, desktop: true });
 registerApp({ id: "terminal", title: "Terminal", component: Terminal, w: 820, h: 480, singleton: true, pinned: true, desktop: true });
 registerApp({ id: "browser", title: "Browser", component: Browser, w: 1000, h: 680, singleton: true, pinned: true, desktop: true });
 registerApp({ id: "notepad", title: "Notepad", component: Notepad, w: 720, h: 520, desktop: true });
