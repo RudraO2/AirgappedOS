@@ -1,3 +1,29 @@
+import { useEffect } from "react";
+import { Browser } from "./os/apps/Browser";
+import { Explorer } from "./os/apps/Explorer";
+import { ImageViewer } from "./os/apps/ImageViewer";
+import { Notepad } from "./os/apps/Notepad";
+import { Settings } from "./os/apps/Settings";
+import { Terminal } from "./os/apps/Terminal";
+import { registerApp } from "./os/kernel/apps";
+import { useOS } from "./os/kernel/store";
+import { Boot } from "./os/shell/Boot";
+import { Desktop } from "./os/shell/Desktop";
+import { Faraday } from "./faraday/Faraday";
+
+registerApp({ id: "faraday", title: "Faraday", component: Faraday, w: 1180, h: 760, singleton: true, pinned: true, desktop: true });
+registerApp({ id: "explorer", title: "File Explorer", component: Explorer, w: 860, h: 540, pinned: true, desktop: true });
+registerApp({ id: "terminal", title: "Terminal", component: Terminal, w: 820, h: 480, singleton: true, pinned: true, desktop: true });
+registerApp({ id: "browser", title: "Browser", component: Browser, w: 1000, h: 680, singleton: true, pinned: true, desktop: true });
+registerApp({ id: "notepad", title: "Notepad", component: Notepad, w: 720, h: 520, desktop: true });
+registerApp({ id: "settings", title: "Settings", component: Settings, w: 760, h: 520, singleton: true, pinned: true });
+registerApp({ id: "viewer", title: "Photos", component: ImageViewer, w: 760, h: 560 });
+
 export default function App() {
-	return <div style={{ padding: 24 }}>Faraday — MRPL Workstation. Scaffold.</div>;
+	const theme = useOS((s) => s.theme);
+	const booted = useOS((s) => s.booted);
+	useEffect(() => {
+		document.documentElement.dataset.theme = theme;
+	}, [theme]);
+	return booted ? <Desktop /> : <Boot />;
 }

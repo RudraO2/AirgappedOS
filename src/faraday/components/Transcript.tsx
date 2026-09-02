@@ -1,0 +1,132 @@
+import { useEffect, useRef, useState } from "react";
+import { downloadNode } from "../../os/apps/Explorer";
+import { useOS } from "../../os/kernel/store";
+import { displayFor } from "../lib/registry/fleet.js";
+import type { Block, Turn } from "../store";
+import { StateDot } from "./ui";
+
+export function Transcript({ turns }: { turns: Turn[] }) {
+	const endRef = useRef<HTMLDivElement>(null);
+	useEffect(() => {
+		endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+	}, [turns]);
+	return (
+		<div className="scroll" style={{ flex: 1, overflowY: "auto", padding: "24px 0 12px" }}>
+			<div style={{ maxWidth: 880, margin: "0 auto", padding: "0 24px", display: "flex", flexDirection: "column", gap: 18 }}>
+				{turns.map((t) => (t.role === "user" ? <UserTurn key={t.id} turn={t} /> : <AssistantTurn key={t.id} turn={t} />))}
+				<div ref={endRef} />
+			</div>
+		</div>
+	);
+}
+
+function UserTurn({ turn }: { turn: Extract<Turn, { role: "user" }> }) {
+	return (
+		<div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 8 }}>
+			{turn.image && (
+				<a href={turn.image.url} target="_blank" rel="noreferrer" title="Open the full-size original">
+					<img src={turn.image.url} alt="Attached image" style={{ maxHeight: 200, maxWidth: 320, borderRadius: 10, border: "1px solid var(--border-l1)", display: "block" }} />
+				</a>
+			)}
+			<div style={{ background: "var(--bg-layer-2)", borderRadius: 18, padding: "10px 16px", fontSize: 15, lineHeight: 1.5, maxWidth: "80%", whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{turn.text}</div>
+		</div>
+	);
+}
+
+function AssistantTurn({ turn }: { turn: Extract<Turn, { role: "assistant" }> }) {
+	return (
+		<div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 15, lineHeight: 1.6 }}>
+			{turn.blocks.map((b, i) => (
+				<BlockView key={i} block={b} />
+			))}
+			{!turn.done && turn.blocks.length === 0 && !turn.error && (
+				<div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--label-tertiary)", fontSize: 13 }}>
+					<Spinner /> {turn.member ? `${displayFor(turn.member)} is answering` : "Routing"}
+				</div>
+			)}
+			{turn.error && (
+				<div style={{ color: "var(--error-primary)", fontSize: 13, border: "1px solid var(--error-primary)", borderRadius: 8, padding: "8px 12px" }}>
+					The model plane did not answer: {turn.error}
+				</div>
+			)}
+			{turn.done && !turn.error && turn.member && (
+				<div style={{ fontSize: 11.5, color: "var(--label-tertiary)", display: "flex", gap: 6, alignItems: "center" }}>
+					<StateDot state="done" size={6} /> Answered by {displayFor(turn.member)} · hosted through the Anthropic API
+				</div>
+			)}
+		</div>
+	);
+}
+
+function BlockView({ block }: { block: Block }) {
+	if (block.type === "text") return <div style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{block.text}</div>;
+	if (block.type === "thinking") return <Thinking text={block.text} />;
+	return <ToolRow block={block} />;
+}
+
+function Thinking({ text }: { text: string }) {
+	const [open, setOpen] = useState(false);
+	return (
+		<div style={{ fontSize: 12.5, color: "var(--label-secondary)" }}>
+			<button onClick={() => setOpen((v) => !v)} aria-expanded={open} style={{ display: "inline-flex", alignItems: "center", gap: 6, color: "var(--label-secondary)" }}>
+				<span aria-hidden style={{ display: "inline-block", transform: open ? "rotate(90deg)" : "none", transition: "transform 120ms ease", fontSize: 10 }}>
+					{"▸"}
+				</span>
+				Reasoning · summarised extended thinking
+			</button>
+			{open && <div style={{ marginTop: 6, paddingLeft: 16, borderLeft: "2px solid var(--border-l2)", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{text}</div>}
+		</div>
+	);
+}
+
+function ToolRow({ block }: { block: Extract<Block, { type: "tool" }> }) {
+	const [open, setOpen] = useState(false);
+	const fs = useOS((s) => s.fs);
+	const summary =
+		block.name === "pwsh"
+			? String(block.input.command ?? "")
+			: block.name === "browser_open"
+				? String(block.input.url ?? "")
+				: block.name === "bf_approval_note"
+					? String(block.input.title ?? "Approval note")
+					: String(block.input.path ?? "");
+	const state = block.status === "running" ? null : block.status === "done" ? "done" : block.status === "denied" ? "error" : "warning";
+	return (
+		<div style={{ fontSize: 13 }}>
+			<button onClick={() => setOpen((v) => !v)} aria-expanded={open} style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--label-secondary)", textAlign: "left", maxWidth: "100%" }}>
+				{state ? <StateDot state={state} size={8} /> : <Spinner />}
+				<span style={{ color: "var(--label-primary)" }}>{block.name === "pwsh" ? "Pwsh" : "Tool call"}</span>
+				<span aria-hidden>·</span>
+				<span className="mono" style={{ fontSize: 12 }}>{block.name === "pwsh" ? "" : block.name + " · "}</span>
+				<span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 480 }}>{summary}</span>
+				{block.status === "denied" && <span style={{ color: "var(--error-primary)", fontWeight: 500 }}>Denied</span>}
+			</button>
+			{open && block.result !== undefined && (
+				<pre className="mono scroll" style={{ marginTop: 6, padding: "8px 10px", background: "var(--bg-layer-2)", border: "1px solid var(--border-l1)", borderRadius: 8, fontSize: 12, whiteSpace: "pre-wrap", overflowWrap: "anywhere", maxHeight: 240, overflow: "auto" }}>
+					{block.result}
+				</pre>
+			)}
+			{block.produced && (
+				<div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, fontSize: 13 }}>
+					<span style={{ color: "var(--label-secondary)" }}>Produced</span>
+					<button
+						onClick={() => {
+							const node = fs.stat(block.produced!.path);
+							if (node && node.kind === "file") downloadNode(node);
+						}}
+						title={`Download ${block.produced.name}`}
+						className="mono"
+						style={{ padding: "3px 8px", borderRadius: 6, background: "var(--bg-layer-2)", border: "1px solid var(--border-l2)", fontSize: 12 }}
+					>
+						{block.produced.name}
+					</button>
+					<span style={{ color: "var(--label-tertiary)", fontSize: 12 }}>· click to download</span>
+				</div>
+			)}
+		</div>
+	);
+}
+
+function Spinner() {
+	return <span aria-hidden style={{ width: 10, height: 10, borderRadius: "50%", border: "2px solid var(--border-l3)", borderTopColor: "var(--label-primary)", display: "inline-block", animation: "spin 900ms linear infinite" }} />;
+}

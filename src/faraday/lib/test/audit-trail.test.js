@@ -146,7 +146,8 @@ test("egress is absent rather than sourced from somewhere else", () => {
  * independent reader, so the assertion is about what a `.docx` consumer would
  * see rather than about what our own writer believes it wrote.
  */
-function unzipToText(zip) {
+function unzipToText(bytes) {
+	const zip = Buffer.from(bytes);
 	const parts = {};
 	let offset = 0;
 	while (offset + 30 <= zip.length && zip.readUInt32LE(offset) === 0x04034b50) {
@@ -191,5 +192,5 @@ test("the docx carries the trail, escapes it, and omits the heading entirely whe
 
 	// No trail means no empty heading. A section header with nothing under it
 	// reads as a bug in the document rather than an absence of data.
-	assert.doesNotMatch(unzipToText(buildApprovalNoteDocx(note))["word/document.xml"], /How this note was produced/);
+	assert.doesNotMatch(unzipToText(Buffer.from(buildApprovalNoteDocx(note)))["word/document.xml"], /How this note was produced/);
 });
