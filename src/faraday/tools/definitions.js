@@ -55,6 +55,16 @@ export const TOOL_DEFINITIONS = [
 		},
 	},
 	{
+		name: "open_file",
+		description: "Open a file on the workstation for the operator to see: text files open in Notepad, images in Photos, folders in File Explorer. Returns nothing but confirmation.",
+		input_schema: {
+			type: "object",
+			properties: { path: { type: "string" } },
+			required: ["path"],
+			additionalProperties: false,
+		},
+	},
+	{
 		name: "list_dir",
 		description: "List a folder on the workstation. File Explorer navigates there on screen.",
 		input_schema: {

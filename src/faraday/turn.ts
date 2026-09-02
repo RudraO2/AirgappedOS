@@ -8,7 +8,6 @@ import { recordRoutingDecision } from "./lib/router/dispatch.js";
 import { scoreFleet } from "./lib/router/score.js";
 import { FLEET, memberFor } from "./lib/registry/fleet.js";
 import { clearTurn, recordImages } from "./lib/trace/turn.js";
-import { SYSTEM_PROMPT } from "./prompt";
 import { executeTool } from "./tools/execute";
 import { nextTurnId, useFaraday, type Block, type RoutingDecision, type Turn } from "./store";
 
@@ -100,7 +99,7 @@ export async function runTurn(text: string, image?: { base64: string; mediaType:
 		for (let step = 0; step < 8; step += 1) {
 			const api = useFaraday.getState().current().api;
 			let final: Extract<Piece, { type: "done" }> | null = null;
-			for await (const piece of streamTurn({ member, system: SYSTEM_PROMPT, messages: api })) {
+			for await (const piece of streamTurn({ member, messages: api })) {
 				if (piece.type === "text") appendToLast("text", piece.text);
 				else if (piece.type === "thinking") appendToLast("thinking", piece.text);
 				else if (piece.type === "error") throw new Error(piece.message);

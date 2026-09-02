@@ -12,6 +12,7 @@
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { TOOL_DEFINITIONS } from "../src/faraday/tools/definitions.js";
+import { systemPromptFor } from "./_prompts.js";
 
 const MEMBERS = {
 	vision: () => process.env.FARADAY_MODEL_VISION ?? "claude-haiku-4-5-20251001",
@@ -28,7 +29,7 @@ export default async function handler(req: Request): Promise<Response> {
 		return new Response(JSON.stringify({ error: "ANTHROPIC_API_KEY is not set on the server" }), { status: 500, headers: { "content-type": "application/json" } });
 	}
 
-	let body: { member?: Member; system?: string; messages?: Anthropic.MessageParam[]; maxTokens?: number };
+	let body: { member?: Member; messages?: Anthropic.MessageParam[]; maxTokens?: number };
 	try {
 		body = await req.json();
 	} catch {
@@ -47,7 +48,8 @@ export default async function handler(req: Request): Promise<Response> {
 				const params: Anthropic.MessageStreamParams = {
 					model,
 					max_tokens: body.maxTokens ?? 4096,
-					system: body.system ?? "",
+					// The persona lives here, per member, never in the browser.
+					system: systemPromptFor(member),
 					messages,
 					tools: TOOL_DEFINITIONS as unknown as Anthropic.Tool[],
 				};

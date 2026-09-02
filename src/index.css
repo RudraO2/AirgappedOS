@@ -29,7 +29,7 @@
 	--shadow-window: 0 24px 64px rgba(0, 0, 0, 0.28), 0 2px 8px rgba(0, 0, 0, 0.16);
 	--acrylic: rgba(243, 243, 243, 0.78);
 	--acrylic-border: rgba(0, 0, 0, 0.08);
-	--wallpaper: radial-gradient(1200px 700px at 30% 30%, #6fb4ff 0%, #2f6fd6 40%, #163a86 100%);
+	--wallpaper: url("/wallpaper-light.jpg") center / cover no-repeat, radial-gradient(1200px 700px at 30% 30%, #6fb4ff 0%, #2f6fd6 40%, #163a86 100%);
 	font-family: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
 	font-size: 13px;
 	line-height: 1.4;
@@ -58,7 +58,7 @@
 	--shadow-window: 0 24px 64px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
 	--acrylic: rgba(32, 32, 36, 0.8);
 	--acrylic-border: rgba(255, 255, 255, 0.08);
-	--wallpaper: radial-gradient(1200px 700px at 30% 30%, #1f4d9e 0%, #14306b 40%, #0a1533 100%);
+	--wallpaper: url("/wallpaper-dark.jpg") center / cover no-repeat, radial-gradient(1200px 700px at 30% 30%, #1f4d9e 0%, #14306b 40%, #0a1533 100%);
 }
 
 html, body, #root { height: 100%; margin: 0; overflow: hidden; }

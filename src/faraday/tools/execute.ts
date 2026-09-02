@@ -6,6 +6,7 @@
 import { browser } from "../../os/kernel/browser";
 import { normalizePath, HOME } from "../../os/kernel/fs";
 import { launch } from "../../os/kernel/launch";
+import { openFile } from "../../os/apps/Explorer";
 import { shell } from "../../os/kernel/shell";
 import { os } from "../../os/kernel/store";
 import { buildAuditTrail } from "../lib/deliverables/audit-trail.js";
@@ -86,6 +87,13 @@ export async function executeTool(name: string, input: Record<string, unknown>, 
 				launch("notepad", { path }, `${path.slice(path.lastIndexOf("\\") + 1)} - Notepad`);
 				recordTool(name, { outcome: `wrote ${path}` });
 				return { content: `Written ${content.length} characters to ${path}.`, status: "done" };
+			}
+			case "open_file": {
+				const path = normalizePath(String(input.path ?? ""), HOME);
+				if (!os.get().fs.exists(path)) throw new Error(`Cannot find path [object Object] because it does not exist.`);
+				openFile(path);
+				recordTool(name, { outcome: `opened ${path}` });
+				return { content: `Opened ${path} on screen.`, status: "done" };
 			}
 			case "list_dir": {
 				const path = normalizePath(String(input.path ?? HOME), HOME);
