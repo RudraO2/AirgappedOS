@@ -144,7 +144,8 @@ function Frame({ url, title }: { url: string; title: string }) {
 	const src = mode.kind === "direct" ? url : `/api/proxy?url=${encodeURIComponent(url)}`;
 	return (
 		<>
-			<iframe title={title} src={src} sandbox="allow-scripts allow-same-origin allow-forms allow-popups" referrerPolicy="no-referrer" style={{ width: "100%", height: "100%", border: "none", display: "block", background: "#fff" }} />
+			{/* A relayed page is served from our origin, so it must NOT get allow-same-origin: it would share the workstation's storage and could navigate it. */}
+			<iframe title={title} src={src} sandbox={mode.kind === "direct" ? "allow-scripts allow-same-origin allow-forms allow-popups" : "allow-scripts allow-forms allow-popups"} referrerPolicy="no-referrer" style={{ width: "100%", height: "100%", border: "none", display: "block", background: "#fff" }} />
 			{mode.kind === "relay" && (
 				<div
 					title="This site refuses to be embedded, so the workstation's page relay fetched it and is showing what came back."
