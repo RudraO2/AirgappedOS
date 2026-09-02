@@ -1,0 +1,252 @@
+[
+	{
+		"match": "hello",
+		"blocks": [
+			{
+				"type": "text",
+				"text": "Hello — this is Faraday running in replay mode. This response is authored for the Phase 0 prototype, not captured from a live run."
+			}
+		]
+	},
+	{
+		"match": "key findings",
+		"steps": [
+			{
+				"blocks": [
+					{
+						"type": "text",
+						"text": "I'll turn the ingested inspection report into key findings. Setting up a goal to track this, then reading the report's OCR output before I say anything about its content."
+					},
+					{
+						"type": "tool-call",
+						"name": "create_goal",
+						"arguments": {
+							"objective": "Extract key findings, each with page-and-region provenance, from the ingested inspection report (sample-inspection-report.pdf)"
+						}
+					}
+				]
+			},
+			{
+				"blocks": [
+					{
+						"type": "text",
+						"text": "156 OCR lines came back across 2 pages. Two carry Major severity in Section 3 and are both named again in the Conclusion — those are the key findings:\n\n```dsh-ui\n{\"title\":\"Key findings — sample-inspection-report.pdf\",\"items\":[{\"type\":\"table\",\"columns\":[\"Tag\",\"Finding\",\"Severity\",\"Read from\"],\"rows\":[[\"E-1104A\",\"Cladding open, corrosion under insulation suspected\",\"Major\",\"p1 · 560, 2048 · 814 × 58\"],[\"PSV-2207A\",\"Test tag expired 04-2026, no bench certificate\",\"Major\",\"p1 · 560, 2171 · 876 × 60\"]]}]}\n```\n\nE-1104A: the cladding is open at the channel end and corrosion under insulation is suspected over a 1.2 m run — strip the cladding and UT scan before restart. PSV-2207A: the relief-valve test tag expired 04-2026 and the register holds no current bench certificate against it — withdraw and bench test, fit the spare.\n\nRead from is the page and the region on it each row was read from.\n\nBoth are cross-referenced in the report's own Conclusion (page 2, region left 178 top 1342 width 2030 height 65): a non-conformance report is to be raised against PSV-2207A, which is operating outside its certification interval."
+					},
+					{
+						"type": "tool-call",
+						"name": "update_goal",
+						"arguments": {
+							"goal_id": "$GOAL_ID",
+							"revision": "$GOAL_REVISION",
+							"action": "complete"
+						}
+					}
+				]
+			},
+			{
+				"blocks": [
+					{
+						"type": "text",
+						"text": "Findings recorded against the ingested report; the goal is marked complete."
+					}
+				]
+			}
+		]
+	},
+	{
+		"match": "use a helper agent",
+		"steps": [
+			{
+				"blocks": [
+					{
+						"type": "text",
+						"text": "I'll spin up a helper agent to double-check the corrosion finding on E-1104A while I draft the recommendation."
+					},
+					{
+						"type": "tool-call",
+						"name": "subagent",
+						"arguments": {
+							"description": "Double-check E-1104A corrosion finding",
+							"prompt": "Double-check the corrosion-under-insulation finding recorded against E-1104A in the ingested inspection report: confirm the severity is Major and that the recommended action (strip cladding and UT scan before restart) is consistent with that severity. Reply in two sentences with your assessment."
+						}
+					}
+				]
+			},
+			{
+				"blocks": [
+					{
+						"type": "text",
+						"text": "Helper agent is running in the background on the corrosion check. I'll let you know what it finds; meanwhile the relief-valve certification gap (PSV-2207A) still needs a bench test scheduled."
+					}
+				]
+			}
+		]
+	},
+	{
+		"match": "corrosion-under-insulation finding",
+		"blocks": [
+			{
+				"type": "text",
+				"text": "Confirmed: the corrosion-under-insulation finding on E-1104A is correctly rated Major, matching the report's own Conclusion cross-reference. Stripping the cladding and running a UT scan before restart is the right call — I'd add a photo record of the exposed run before re-cladding."
+			}
+		]
+	},
+	{
+		"match": "run a coding task in the sandbox",
+		"steps": [
+			{
+				"blocks": [
+					{
+						"type": "text",
+						"text": "I'll run a small coding task inside the sandbox so you can watch it execute for real, then read back what it returns."
+					},
+					{
+						"type": "tool-call",
+						"name": "pwsh",
+						"arguments": {
+							"command": "(1..10 | Measure-Object -Sum).Sum",
+							"description": "Sum the numbers 1 through 10"
+						}
+					}
+				]
+			},
+			{
+				"blocks": [
+					{
+						"type": "text",
+						"text": "The sandbox ran that and returned 55 — a real coding task executed and verified inside ctx.sandbox, not simulated."
+					}
+				]
+			}
+		]
+	},
+	{
+		"match": "run a task that will fail",
+		"steps": [
+			{
+				"blocks": [
+					{
+						"type": "text",
+						"text": "I'll run a command that deliberately fails, so you can see the failure surface here rather than being swallowed."
+					},
+					{
+						"type": "tool-call",
+						"name": "pwsh",
+						"arguments": {
+							"command": "exit 7",
+							"description": "Exit immediately with a non-zero status"
+						}
+					}
+				]
+			},
+			{
+				"blocks": [
+					{
+						"type": "text",
+						"text": "That command exited with status 7. The sandbox reported the failure rather than hiding it."
+					}
+				]
+			}
+		]
+	},
+	{
+		"match": "reach the internet from the sandbox",
+		"steps": [
+			{
+				"blocks": [
+					{
+						"type": "text",
+						"text": "I'll try an outbound web request from inside the sandbox so you can watch it get denied."
+					},
+					{
+						"type": "tool-call",
+						"name": "pwsh",
+						"arguments": {
+							"command": "Invoke-WebRequest -Uri https://example.com/blind-flange-canary",
+							"description": "Fetch a page over HTTP from inside the sandbox"
+						}
+					}
+				]
+			},
+			{
+				"blocks": [
+					{
+						"type": "text",
+						"text": "That request was denied and recorded — the sandbox's shell is sealed the same way the network canary is. Check the Egress panel for the new denial."
+					}
+				]
+			}
+		]
+	},
+	{
+		"match": "generate the approval note",
+		"steps": [
+			{
+				"blocks": [
+					{
+						"type": "text",
+						"text": "I'll pull the report's findings and their provenance before drafting the approval note."
+					}
+				]
+			},
+			{
+				"blocks": [
+					{
+						"type": "text",
+						"text": "Drafting the approval note from the two Major findings, each citing the page and region it was read from."
+					},
+					{
+						"type": "tool-call",
+						"name": "bf_approval_note",
+						"arguments": {
+							"title": "Approval Note",
+							"referenceNumber": "NRC/RVF/APPR-0417",
+							"sourceReport": "sample-inspection-report.pdf",
+							"clauses": [
+								{
+									"text": "E-1104A — insulation cladding open at the channel end, corrosion under insulation suspected over a 1.2 m run. Major. Recommended action: strip cladding and UT scan before restart.",
+									"page": 1,
+									"region": {
+										"left": 560,
+										"top": 2048,
+										"width": 814,
+										"height": 58
+									},
+									"tag": "E-1104A"
+								},
+								{
+									"text": "PSV-2207A — relief-valve test tag expired 04-2026, no current bench certificate held against this tag in the register. Major. Recommended action: withdraw and bench test; fit spare.",
+									"page": 1,
+									"region": {
+										"left": 560,
+										"top": 2171,
+										"width": 876,
+										"height": 60
+									},
+									"tag": "PSV-2207A"
+								}
+							]
+						}
+					}
+				]
+			},
+			{
+				"blocks": [
+					{
+						"type": "text",
+						"text": "The approval note is ready — NRC/RVF/APPR-0417, citing both Major findings with the page and region each was read from, signed and provenance-hashed."
+					}
+				]
+			}
+		]
+	},
+	{
+		"match": null,
+		"blocks": [
+			{
+				"type": "text",
+				"text": "This is an authored replay response for the Phase 0 prototype (ADR-0001, 28 August 2026 amendment). It stands in for real local inference until that runs on day 4."
+			}
+		]
+	}
+]

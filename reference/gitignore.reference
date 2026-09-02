@@ -1,0 +1,66 @@
+node_modules/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+dist/
+build/
+.DS_Store
+Thumbs.db
+
+# model weights and caches - never commit, always pre-staged separately
+*.gguf
+*.safetensors
+models/
+.cache/
+
+# The BMAD tool installation itself is NOT tracked — removed 28 Aug 2026.
+#
+# `.claude/skills/` is 49 third-party skill packages and `_bmad/` is the
+# framework install: 265 files and about 3 MB of somebody else's code, shipping
+# with no licence text of its own. This repository's central claim is that
+# every component's licence is enumerated and checked, and `npm run licence-audit`
+# covers npm, Python, the models and vendored binaries — it never looked at
+# either of these trees. Publishing un-audited third-party code beside that
+# claim is the one inconsistency this project cannot afford, and the tooling is
+# reinstallable in a command, so it goes.
+#
+# Install BMAD separately if you want to run its workflows; nothing the
+# workbench does at runtime depends on it.
+#
+# `_bmad/custom/` IS kept: those overrides are ours, they explain themselves,
+# and the build loop that produced them referred to them.
+.claude/skills/
+_bmad/*
+!_bmad/custom/
+
+# The development method's own working output, removed from the repository on
+# 31 August 2026 and kept on disk.
+#
+# It was tracked in full for three days, on the reasoning that the specs say why
+# each story was built the way it was and someone picking the project up cold
+# would need them. That reasoning was sound for a teammate and wrong for a
+# reader: what survives here should be the product and the evidence behind its
+# decisions — the ADRs, the licence record, the measurements — not the process
+# that produced them. The decisions are in docs/adr/; the measurements are in
+# docs/measurements/; the history is in git.
+_bmad/
+_bmad-output/
+
+# Claude Code worktrees — Lane B works in one; never commit a worktree tree.
+.claude/worktrees/
+
+# Story 5.4's approval-note tool writes real .docx files here at runtime
+# (session cwd defaults to the repo root under `dsh --profile headless`).
+# Generated output, never source.
+/deliverables/
+
+# Kept on disk, deliberately out of the repository (31 August 2026). CLAUDE.md is
+# instruction for an AI coding agent, not part of the product; a reader of this
+# repository should meet the README, not a briefing written for a tool.
+CLAUDE.md
+
+# `npm run record-demo` writes its MP4 here. Recordings are output, not source.
+videos/

@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+/*
+ * Theme tokens. Names mirror the prototype's harness tokens (`--dsw-alias-*`)
+ * so the ported copy and layout carry across. Every surface renders in both
+ * themes; a component uses these variables and never a literal colour.
+ */
+:root {
+	color-scheme: light;
+	--label-primary: #1a1a1a;
+	--label-secondary: #5c5c5c;
+	--label-tertiary: #8a8a8a;
+	--border-l1: #e6e6e6;
+	--border-l2: #d6d6d6;
+	--border-l3: #bdbdbd;
+	--bg-layer-1: #ffffff;
+	--bg-layer-2: #f4f4f5;
+	--bg-layer-3: #ebebee;
+	--interactive-hover: #ececef;
+	--selector: #e8e8ea;
+	--accent: #4d6bfe;
+	--accent-label: #ffffff;
+	--state-done: #22a55b;
+	--warn-primary: #d99a1b;
+	--warn-tertiary: #fff6e0;
+	--warn-label: #8a5d00;
+	--error-primary: #e5484d;
+	--shadow-lv2: 0 8px 24px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+	--shadow-window: 0 24px 64px rgba(0, 0, 0, 0.28), 0 2px 8px rgba(0, 0, 0, 0.16);
+	--acrylic: rgba(243, 243, 243, 0.78);
+	--acrylic-border: rgba(0, 0, 0, 0.08);
+	--wallpaper: radial-gradient(1200px 700px at 30% 30%, #6fb4ff 0%, #2f6fd6 40%, #163a86 100%);
+	font-family: "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
+	font-size: 13px;
+	line-height: 1.4;
+}
+:root[data-theme="dark"] {
+	color-scheme: dark;
+	--label-primary: #f2f2f2;
+	--label-secondary: #b0b0b0;
+	--label-tertiary: #7d7d7d;
+	--border-l1: #2b2b2e;
+	--border-l2: #38383c;
+	--border-l3: #4a4a50;
+	--bg-layer-1: #1c1c1f;
+	--bg-layer-2: #242428;
+	--bg-layer-3: #2c2c31;
+	--interactive-hover: #2f2f34;
+	--selector: #33333a;
+	--accent: #6c8cff;
+	--accent-label: #ffffff;
+	--state-done: #3ddc84;
+	--warn-primary: #e0a634;
+	--warn-tertiary: #3a2e10;
+	--warn-label: #f2c76c;
+	--error-primary: #ff6369;
+	--shadow-lv2: 0 8px 24px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.4);
+	--shadow-window: 0 24px 64px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
+	--acrylic: rgba(32, 32, 36, 0.8);
+	--acrylic-border: rgba(255, 255, 255, 0.08);
+	--wallpaper: radial-gradient(1200px 700px at 30% 30%, #1f4d9e 0%, #14306b 40%, #0a1533 100%);
+}
+
+html, body, #root { height: 100%; margin: 0; overflow: hidden; }
+body { background: var(--bg-layer-1); color: var(--label-primary); -webkit-font-smoothing: antialiased; }
+* { box-sizing: border-box; }
+button { font: inherit; color: inherit; background: none; border: none; padding: 0; cursor: pointer; }
+input, textarea { font: inherit; color: inherit; }
+::selection { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+
+.acrylic { background: var(--acrylic); backdrop-filter: blur(28px) saturate(1.4); -webkit-backdrop-filter: blur(28px) saturate(1.4); border: 1px solid var(--acrylic-border); }
+.tabular { font-variant-numeric: tabular-nums; }
+.mono { font-family: "Cascadia Mono", "Cascadia Code", Consolas, "SF Mono", Menlo, monospace; }
+.scroll { overflow: auto; scrollbar-width: thin; scrollbar-color: var(--border-l3) transparent; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.fade-up { animation: fadeUp 160ms ease-out; }
+.fade-in { animation: fadeIn 200ms ease-out; }

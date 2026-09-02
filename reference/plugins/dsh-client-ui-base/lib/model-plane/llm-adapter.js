@@ -1,0 +1,540 @@
+/**
+ * Bridges our own `ModelProvider` contract (model-provider.js) onto the
+ * harness's `ctx.llm.registerAdapter(providers, adapter)` seam.
+ *
+ * Deliberately does NOT import `@deepseek-ai/dsh-llm` to get its `LlmAdapter`
+ * base class. Two things were verified directly against the installed
+ * harness (0.1.1-rc.2) on 28 August 2026, the day-one timebox for this seam:
+ *
+ * 1. `registerAdapter` never does an `instanceof` check — every method it
+ *    calls (`providerInfo`, `providerRetryPolicy`, `prepareCall`, `stream`)
+ *    is duck-typed, so a plain object implementing them registers exactly
+ *    like a real `LlmAdapter` subclass would.
+ * 2. This plugin is mounted through a `link:` row in the profile's
+ *    `package.json`, i.e. loaded through a symlink. Node resolves bare
+ *    specifiers from a symlinked module's REAL on-disk path, which is this
+ *    repo — not the profile's `node_modules` the harness's own packages live
+ *    in — so `import "@deepseek-ai/dsh-llm"` from here fails with
+ *    `ERR_MODULE_NOT_FOUND` even though the harness process has that package
+ *    loaded and working.
+ *
+ * Duck-typing sidesteps both: the contract stays ours (CONTEXT.md "Plugin
+ * contract" — "the harness is an implementation of them"), and there is
+ * nothing here for the symlink to break.
+ */
+
+import {
+	CODE_LANE_SYSTEM_PROMPT,
+	clearPrediction,
+	describeVerdict,
+	parseProgram,
+	pendingPrediction,
+	PYTHON_PROGRAM_SCHEMA,
+	PYTHON_PROGRAM_SCHEMA_NAME,
+	pythonCommand,
+	rememberPrediction,
+	SANDBOX_TOOL_NAME,
+	sandboxHasReported,
+	sandboxOutput,
+	servesTaskType,
+	verdictFor,
+} from "../lanes/code.js";
+import {
+	alreadyDispatched,
+	describePlan,
+	describeProgress,
+	describeReports,
+	FANOUT_SUMMARY_SYSTEM_PROMPT,
+	FANOUT_LANE_MAX_TOKENS,
+	FANOUT_LANE_SYSTEM_PROMPT,
+	FANOUT_PLAN_SCHEMA,
+	FANOUT_PLAN_SCHEMA_NAME,
+	helpersDispatched,
+	helpersHaveReported,
+	isSettleTurn,
+	parsePlan,
+	rememberDispatch,
+	settledReports,
+	subagentArguments,
+	SUBAGENT_TOOL_NAME,
+	userText,
+	wantsDelegation,
+} from "../lanes/fanout.js";
+import {
+	alreadyWritten,
+	APPROVAL_NOTE_SCHEMA,
+	APPROVAL_NOTE_SCHEMA_NAME,
+	APPROVAL_NOTE_TOOL_NAME,
+	DELIVERABLE_LANE_MAX_TOKENS,
+	DELIVERABLE_LANE_SYSTEM_PROMPT,
+	describeNote,
+	noteHasBeenWritten,
+	parseNote,
+	rememberWrite,
+	wantsDeliverable,
+} from "../lanes/deliverable.js";
+import { announceRefusals, loadFleet } from "../registry/loader.js";
+import { imageRefsIn, resolveMessageImages } from "../attachments/images.js";
+import { currentTaskType, runtimeModelForCurrentTurn } from "../router/dispatch.js";
+import { recordImages, recordTool } from "../trace/turn.js";
+
+/** Exact model identity this adapter reports; nothing here validates against a catalog (advisory only, per the harness's own contract). */
+async function resolveModel(provider, model) {
+	return { provider, id: model, name: model };
+}
+
+/**
+ * The fleet from `registry/models.yaml`, shaped as the harness's model list
+ * entries and attributed to `provider`. This is what makes Story 3.3's "a new
+ * member added to that file appears in the UI model list" true: the list is
+ * read from the registry on every call, never from a second copy here.
+ *
+ * `licence`, `context`, `modalities` and `capabilities` ride along as advisory
+ * fields — the harness duck-types model entries and does not validate them, and
+ * the router (Stories 3.5-3.6) reads the same shape. The licence loader (Story
+ * 3.4) drops disallowed-licence members before they reach here, so an
+ * unrunnable model is never choosable; a registry read failure yields an empty
+ * list rather than breaking the picker.
+ * @param {string} provider - the provider token this adapter serves under.
+ */
+function fleetModels(provider) {
+	try {
+		return loadFleet().loaded.map((member) => ({
+			provider,
+			id: member.name,
+			name: member.name,
+			role: member.role,
+			licence: member.licence,
+			context: member.context,
+			modalities: member.modalities,
+			capabilities: member.capabilities,
+		}));
+	} catch (error) {
+		console.warn(`@blind-flange/dsh-client-ui-base: fleet registry not listed — ${error.message}`);
+		return [];
+	}
+}
+
+/**
+ * Streams one turn from `modelProvider`, translated into the harness's chunk
+ * vocabulary. Consecutive `text` pieces accumulate into one streamed text
+ * block, closed by the next tool-call piece or end of stream; each
+ * `tool-call` piece (Story 5.1) is its own block, opened and closed
+ * immediately since a replayed call is never fragmentary. At most one block
+ * is ever open at a time, so block-start/block-end stay paired even when
+ * `modelProvider.answer()` throws mid-stream — the open text block, if any,
+ * is closed in the `catch` before the terminal `error` finish chunk. Finish
+ * reason is `tool-calls` whenever any tool-call block was emitted, `stop`
+ * otherwise (StreamChunk contract, `packages/llm/llm/src/types.ts`).
+ * @param {import("./model-provider.js").ModelProvider} modelProvider
+ * @param {{ messages: unknown[] }} options
+ */
+/**
+ * The runtime model this turn should be answered by, from the router's decision.
+ *
+ * Resolved here because this is the last point before the provider is called and
+ * the first point where the decision and the fleet are both reachable. Never
+ * throws and never blocks a turn: a dispatch that cannot resolve leaves `model`
+ * undefined, and the provider falls back to its configured default. The reason
+ * is logged rather than swallowed, because a silent fallback looks exactly like
+ * a routing decision.
+ *
+ * `replay` ignores `model` entirely, so this is inert under the replay provider
+ * and its tests are unaffected.
+ */
+function dispatchForTurn() {
+	try {
+		const dispatch = runtimeModelForCurrentTurn(loadFleet().loaded);
+		if (dispatch.runtimeId === null && dispatch.reason !== "no-routing-decision") {
+			console.warn(
+				`@blind-flange/dsh-client-ui-base: routing decision not dispatched (${dispatch.reason}` +
+					`${dispatch.member ? `, member "${dispatch.member}"` : ""}) — falling back to the provider's default model`,
+			);
+		}
+		return dispatch;
+	} catch (error) {
+		console.warn(`@blind-flange/dsh-client-ui-base: dispatch not resolved — ${error instanceof Error ? error.message : String(error)}`);
+		return { runtimeId: null, member: null, reason: "dispatch-failed" };
+	}
+}
+
+/**
+ * Read the model's schema-constrained reply out of a stream of pieces.
+ * @param {AsyncGenerator<{ type: string, text?: string }>} pieces
+ */
+async function drainText(pieces) {
+	let text = "";
+	for await (const piece of pieces) {
+		if (piece.type === "text") text += piece.text;
+	}
+	return text;
+}
+
+/**
+ * The coding lane's two steps, as harness pieces.
+ *
+ * **Step one** asks the model for `{ code, description, expected }` under a
+ * schema, remembers the prediction, and emits a `tool-call` for the sandbox. The
+ * harness dispatches that call for real — through `tools/pre-execute`, so the
+ * egress seal inspects the program exactly as it would any other command — and
+ * calls back with the result.
+ *
+ * **Step two** compares what the sandbox printed against what the model
+ * predicted *before* running, and states the verdict as the first thing in the
+ * reply. That line is ours, computed by `verdictFor`; the prose after it is the
+ * model's. Which means a judge reading the answer can tell what was measured
+ * from what was narrated.
+ *
+ * Falls back to a plain turn whenever the lane cannot proceed — a reply that is
+ * not usable JSON, a multi-line program, a missing prediction. A coding answer
+ * without a sandbox run is a worse answer, not a broken product.
+ * @param {import("./model-provider.js").ModelProvider} modelProvider
+ * @param {{ messages: unknown[] }} options
+ * @param {{ runtimeId: string | null }} dispatch
+ */
+async function* codeLanePieces(modelProvider, options, dispatch) {
+	const model = dispatch.runtimeId ?? undefined;
+
+	if (sandboxHasReported(options.messages)) {
+		const prediction = pendingPrediction();
+		if (prediction === null) {
+			yield* modelProvider.answer({ messages: options.messages, model });
+			return;
+		}
+		const result = verdictFor(prediction.expected, sandboxOutput(options.messages));
+		clearPrediction();
+		// Recorded here rather than when the call was emitted, because this is the
+		// first point the outcome is known — and an audit trail listing a sandbox
+		// run without saying what it produced is the half of the record that
+		// matters least. Without this a coding-lane approval note would name only
+		// the tools we dispatch ourselves and under-report its own work.
+		recordTool(SANDBOX_TOOL_NAME, { outcome: `${result.verdict.toLowerCase()} — the sandbox computed ${result.actual || "nothing"}` });
+		yield { type: "text", text: `${describeVerdict(result)}\n\n` };
+		yield* modelProvider.answer({ messages: options.messages, model });
+		return;
+	}
+
+	const reply = await drainText(
+		modelProvider.answer({
+			model,
+			schema: PYTHON_PROGRAM_SCHEMA,
+			schemaName: PYTHON_PROGRAM_SCHEMA_NAME,
+			maxTokens: CODE_LANE_MAX_TOKENS,
+			messages: [{ role: "system", content: CODE_LANE_SYSTEM_PROMPT }, ...options.messages],
+		}),
+	);
+
+	let program;
+	let command;
+	try {
+		program = parseProgram(reply);
+		command = pythonCommand(program.code);
+	} catch (error) {
+		console.warn(`@blind-flange/dsh-client-ui-base: coding lane fell back to a plain turn — ${error.message}`);
+		yield* modelProvider.answer({ messages: options.messages, model });
+		return;
+	}
+
+	rememberPrediction(program);
+	yield { type: "text", text: `${program.description}\n\nPredicted result: ${program.expected}\n\n` };
+	yield {
+		type: "tool-call",
+		id: `bf-code-lane-${Date.now()}`,
+		name: SANDBOX_TOOL_NAME,
+		arguments: JSON.stringify({ command, description: program.description }),
+	};
+}
+
+/**
+ * What the parent says once helpers are out.
+ *
+ * The harness delivers each finished helper as its own turn, so before this the
+ * parent answered once per helper — three short replies, each summarising
+ * whichever child had just spoken and naming no subject. Observed 31 August 2026.
+ *
+ * Now it holds. A helper that is not the last produces one written line, with no
+ * model call at all: how many have reported is a fact this code knows exactly,
+ * and spending a 1.5B on it would make a certainty less reliable. When the last
+ * one lands, every report is laid out verbatim and the model is asked for a
+ * synthesis after them — so a reader can tell what was reported from what was
+ * concluded, the same separation the coding lane draws.
+ * @param {import("./model-provider.js").ModelProvider} modelProvider
+ * @param {{ messages: unknown[] }} options
+ * @param {string | undefined} model
+ */
+async function* settlePieces(modelProvider, options, model) {
+	if (!isSettleTurn(options.messages)) {
+		yield* modelProvider.answer({ messages: options.messages, model });
+		return;
+	}
+	const reports = settledReports(options.messages);
+	const total = helpersDispatched();
+	// `total` can be 0 after a restart, when this process never saw the dispatch.
+	// Summarising what is in hand beats holding for a count we cannot know.
+	if (total > 0 && reports.length < total) {
+		yield { type: "text", text: describeProgress(reports.length, total) };
+		return;
+	}
+	yield { type: "text", text: `${describeReports(reports)}\n` };
+	yield* modelProvider.answer({
+		model,
+		messages: [{ role: "system", content: FANOUT_SUMMARY_SYSTEM_PROMPT }, ...options.messages],
+	});
+}
+
+/**
+ * The fan-out lane's two steps, as harness pieces.
+ *
+ * **Step one** asks the model for `{ helpers: [{ description, prompt }] }` under
+ * a schema and emits one `tool-call` per helper. The harness dispatches each for
+ * real, spawning a genuine subagent session with its own lineage — which is what
+ * makes the shipped `ui-subagent` breadcrumb count something true.
+ *
+ * **Step two** is a plain turn over the results. Nothing of ours is computed
+ * there: a helper's answer is the helper's, and the parent summarising it is the
+ * parent's own work.
+ *
+ * Falls back to a plain turn whenever the plan cannot be used. A delegation
+ * request answered directly is a worse answer; a turn lost to a parse error is
+ * no answer at all.
+ * @param {import("./model-provider.js").ModelProvider} modelProvider
+ * @param {{ messages: unknown[] }} options
+ * @param {{ runtimeId: string | null }} dispatch
+ */
+async function* fanoutLanePieces(modelProvider, options, dispatch) {
+	const model = dispatch.runtimeId ?? undefined;
+	const trigger = userText(options.messages);
+
+	// Two independent reasons not to dispatch, and both are checked because
+	// either alone was once believed sufficient. The first reads the harness's
+	// message list; the second reads the operator's own words. See
+	// `alreadyDispatched` in `lanes/fanout.js` for what thirty-six children cost.
+	if (helpersHaveReported(options.messages) || alreadyDispatched(trigger)) {
+		yield* settlePieces(modelProvider, options, model);
+		return;
+	}
+
+	const reply = await drainText(
+		modelProvider.answer({
+			model,
+			schema: FANOUT_PLAN_SCHEMA,
+			schemaName: FANOUT_PLAN_SCHEMA_NAME,
+			maxTokens: FANOUT_LANE_MAX_TOKENS,
+			messages: [{ role: "system", content: FANOUT_LANE_SYSTEM_PROMPT }, ...options.messages],
+		}),
+	);
+
+	let helpers;
+	try {
+		helpers = parsePlan(reply);
+	} catch (error) {
+		console.warn(`@blind-flange/dsh-client-ui-base: fan-out lane fell back to a plain turn — ${error.message}`);
+		yield* modelProvider.answer({ messages: options.messages, model });
+		return;
+	}
+
+	// Remembered BEFORE the calls are emitted, not after. A generator that is
+	// abandoned part-way — the operator pressing stop — must still count as a
+	// dispatch, because the sessions it already spawned are real.
+	rememberDispatch(trigger, helpers.length);
+	yield { type: "text", text: `${describePlan(helpers)}
+
+` };
+	// Recorded once per helper, so an approval note drawn from this turn names
+	// every session it caused rather than the fact that delegation happened.
+	for (const [ordinal, helper] of helpers.entries()) {
+		recordTool(SUBAGENT_TOOL_NAME, { outcome: `dispatched — ${helper.description}` });
+		yield {
+			type: "tool-call",
+			id: `bf-fanout-${Date.now()}-${ordinal}`,
+			name: SUBAGENT_TOOL_NAME,
+			arguments: subagentArguments(helper),
+		};
+	}
+}
+
+/**
+ * A reply ceiling. A third of the failures during bring-up were the *schema
+ * output itself* truncating mid-string because the model rambled past 300
+ * tokens — a defect in our request, not in the model.
+ */
+const CODE_LANE_MAX_TOKENS = 700;
+
+/**
+ * The deliverable lane's one step, as harness pieces.
+ *
+ * The model returns `{ title, referenceNumber, sourceReport, clauses }` under a
+ * schema and we emit a single `tool-call` for the registered approval-note tool.
+ * The harness dispatches it for real: real OOXML, real bytes, real content hash,
+ * and the audit trail assembled by the tool itself from live panel state rather
+ * than from anything the model said about its own routing.
+ *
+ * There is no second step. Unlike the sandbox — where the point is comparing a
+ * prediction against a computed value — the file either exists or the call
+ * failed, and the harness's own deliverables row is what reports that.
+ *
+ * Falls back to a plain turn whenever the note cannot be used. An operator who
+ * asked for a document and got a paragraph is disappointed; one who got an error
+ * has nothing at all.
+ * @param {import("./model-provider.js").ModelProvider} modelProvider
+ * @param {{ messages: unknown[] }} options
+ * @param {{ runtimeId: string | null }} dispatch
+ */
+async function* deliverableLanePieces(modelProvider, options, dispatch) {
+	const model = dispatch.runtimeId ?? undefined;
+	const trigger = userText(options.messages);
+
+	// Both guards, for the reason `lanes/fanout.js` records: one reads the
+	// harness's message list, the other the operator's own words, and a file
+	// written twice is worse than a turn answered plainly.
+	if (noteHasBeenWritten(options.messages) || alreadyWritten(trigger)) {
+		yield* modelProvider.answer({ messages: options.messages, model });
+		return;
+	}
+
+	const reply = await drainText(
+		modelProvider.answer({
+			model,
+			schema: APPROVAL_NOTE_SCHEMA,
+			schemaName: APPROVAL_NOTE_SCHEMA_NAME,
+			maxTokens: DELIVERABLE_LANE_MAX_TOKENS,
+			messages: [{ role: "system", content: DELIVERABLE_LANE_SYSTEM_PROMPT }, ...options.messages],
+		}),
+	);
+
+	let note;
+	try {
+		note = parseNote(reply);
+	} catch (error) {
+		console.warn(`@blind-flange/dsh-client-ui-base: deliverable lane fell back to a plain turn — ${error.message}`);
+		yield* modelProvider.answer({ messages: options.messages, model });
+		return;
+	}
+
+	// Remembered before the call is emitted: an abandoned generator has still
+	// caused a file to be written.
+	rememberWrite(trigger);
+	yield { type: "text", text: `${describeNote(note)}\n\n` };
+	yield {
+		type: "tool-call",
+		id: `bf-deliverable-${Date.now()}`,
+		name: APPROVAL_NOTE_TOOL_NAME,
+		arguments: JSON.stringify(note),
+	};
+}
+
+async function* streamImpl(modelProvider, options, readImageRequest) {
+	const dispatch = dispatchForTurn();
+	// Attached pictures are resolved from their durable references into bytes
+	// before the provider sees them, so the provider stays a wire serialiser and
+	// nothing below this line knows the harness's attachment service exists.
+	// A turn with no attachment resolves to the same array it was given.
+	const messages = await resolveMessageImages(options.messages, readImageRequest);
+	// The residency panel and the approval note both answer "did the model
+	// actually see the picture?" from this, which is why it counts what was
+	// resolved rather than what was attached.
+	recordImages(imageRefsIn(messages).length);
+	// The lane that shapes the request is chosen by task type; the model that
+	// answers it by dispatch. Both come from the same routing decision.
+	// Delegation is asked for in the operator's own words and is orthogonal to
+	// task type — a calculation can be delegated or not — so it is tested before
+	// the type-keyed lane rather than alongside it. See `lanes/fanout.js`.
+	let pieces;
+	if (wantsDelegation(messages)) {
+		pieces = fanoutLanePieces(modelProvider, { ...options, messages }, dispatch);
+	} else if (wantsDeliverable(messages)) {
+		// Also asked for in the operator's own words, and also orthogonal to task
+		// type — findings from a drawing, a calculation and a code review are three
+		// different types and any of them can be written up. Tested after
+		// delegation so "split this up and write it up" fans out first; the note is
+		// then asked for over the helpers' results, which is the order that
+		// produces a document worth signing.
+		pieces = deliverableLanePieces(modelProvider, { ...options, messages }, dispatch);
+	} else if (servesTaskType(currentTaskType())) {
+		pieces = codeLanePieces(modelProvider, { ...options, messages }, dispatch);
+	} else {
+		pieces = modelProvider.answer({ messages, model: dispatch.runtimeId ?? undefined });
+	}
+	let index = -1;
+	let openTextIndex = -1;
+	let openText = "";
+	let sawToolCall = false;
+	try {
+		for await (const piece of pieces) {
+			if (piece.type === "text") {
+				if (piece.text.length === 0) continue;
+				if (openTextIndex === -1) {
+					index += 1;
+					openTextIndex = index;
+					yield { type: "block-start", index: openTextIndex, blockType: "text" };
+				}
+				openText += piece.text;
+				yield { type: "text-delta", index: openTextIndex, text: piece.text };
+				continue;
+			}
+			if (piece.type !== "tool-call") continue;
+			if (openTextIndex !== -1) {
+				yield { type: "block-end", index: openTextIndex, block: { type: "text", text: openText } };
+				openTextIndex = -1;
+				openText = "";
+			}
+			sawToolCall = true;
+			index += 1;
+			const toolIndex = index;
+			yield { type: "block-start", index: toolIndex, blockType: "tool-call" };
+			yield { type: "tool-call-delta", index: toolIndex, id: piece.id, name: piece.name, argumentsDelta: piece.arguments };
+			yield { type: "block-end", index: toolIndex, block: { type: "tool-call", id: piece.id, name: piece.name, arguments: piece.arguments } };
+		}
+		if (openTextIndex !== -1) {
+			yield { type: "block-end", index: openTextIndex, block: { type: "text", text: openText } };
+		}
+		yield { type: "finish", reason: sawToolCall ? { kind: "tool-calls" } : { kind: "stop" } };
+	} catch (error) {
+		if (openTextIndex !== -1) {
+			yield { type: "block-end", index: openTextIndex, block: { type: "text", text: openText } };
+		}
+		yield {
+			type: "finish",
+			reason: { kind: "error", failure: { message: error instanceof Error ? error.message : String(error), code: "MODEL_PROVIDER_ERROR" } },
+		};
+	}
+}
+
+/**
+ * @param {import("./model-provider.js").ModelProvider} modelProvider - the selected provider this adapter serves turns from.
+ * @param {{ displayName: string, readImageRequest?: (ref: object, policy: object) => Promise<{ data: Uint8Array, mediaType: string }> }} options
+ *   `readImageRequest` is the harness's `ctx.attachments.readImageRequest`, passed
+ *   in by `index.js` rather than reached for here, so this file keeps knowing
+ *   nothing about the host beyond the seam it is handed. Omitted — in every unit
+ *   test, and in a profile with no attachment service — image blocks resolve to
+ *   nothing and a text turn is unaffected.
+ */
+export function createLlmAdapter(modelProvider, { displayName, readImageRequest }) {
+	// State every licence refusal once, at mount — an error line per refused
+	// fleet member naming the licence that caused it (Story 3.4). This is the
+	// "not a warning, a refusal" the licence policy requires; `fleetModels`
+	// then serves only the members that passed.
+	try {
+		announceRefusals(loadFleet().refused);
+	} catch (error) {
+		console.warn(`@blind-flange/dsh-client-ui-base: fleet registry not read for the licence gate — ${error.message}`);
+	}
+
+	const stream = (options) => streamImpl(modelProvider, options, readImageRequest);
+	return {
+		providerInfo(provider) {
+			return { id: provider, name: displayName };
+		},
+		providerRetryPolicy() {
+			return undefined;
+		},
+		async listModels(provider) {
+			return fleetModels(provider ?? "replay");
+		},
+		resolveModel,
+		async prepareCall(provider, model) {
+			return { model: await resolveModel(provider, model), stream };
+		},
+		stream,
+	};
+}
