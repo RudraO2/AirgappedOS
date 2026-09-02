@@ -5,7 +5,9 @@ import { ImageViewer } from "./os/apps/ImageViewer";
 import { Notepad } from "./os/apps/Notepad";
 import { Settings } from "./os/apps/Settings";
 import { Terminal } from "./os/apps/Terminal";
+import { Welcome } from "./os/apps/Welcome";
 import { registerApp } from "./os/kernel/apps";
+import { launch } from "./os/kernel/launch";
 import { useOS } from "./os/kernel/store";
 import { Boot } from "./os/shell/Boot";
 import { Desktop } from "./os/shell/Desktop";
@@ -18,6 +20,7 @@ registerApp({ id: "browser", title: "Browser", component: Browser, w: 1000, h: 6
 registerApp({ id: "notepad", title: "Notepad", component: Notepad, w: 720, h: 520, desktop: true });
 registerApp({ id: "settings", title: "Settings", component: Settings, w: 760, h: 520, singleton: true, pinned: true });
 registerApp({ id: "viewer", title: "Photos", component: ImageViewer, w: 760, h: 560 });
+registerApp({ id: "welcome", title: "What you are looking at", component: Welcome, w: 660, h: 600, singleton: true });
 
 export default function App() {
 	const theme = useOS((s) => s.theme);
@@ -25,5 +28,8 @@ export default function App() {
 	useEffect(() => {
 		document.documentElement.dataset.theme = theme;
 	}, [theme]);
+	useEffect(() => {
+		if (booted) launch("welcome");
+	}, [booted]);
 	return booted ? <Desktop /> : <Boot />;
 }

@@ -161,9 +161,50 @@ screenshotting** — every panel works, nothing needs a GPU.
 3. **How the seal is presented** once there is no process boundary to deny at (see the
    correction section above).
 
+## What was built (3 Sep 2026, overnight)
+
+Plan: `~/.claude/plans/work-in-c-users-rpxi1-onedrive-documents-logical-goblet.md`. Stack: Vite +
+React 18 + TypeScript, Tailwind v4, zustand. One Vercel function `api/turn.ts` streams NDJSON and
+holds the key; the tool loop runs in the browser because the workstation the tools act on lives
+there. Ported logic stays plain ESM `.js` under `src/faraday/lib/` so the prototype's tests run
+unchanged: `npm test` → 51 green.
+
+```
+api/turn.ts                      the model plane's server piece (Anthropic SDK, streaming)
+src/os/kernel/                   store (windows, theme, toasts), fs (virtual FS, seeded), terminal
+                                 (PowerShell-shaped interpreter, `node -e` in a Worker), shell
+                                 (terminal session), browser (tabs), apps (registry), launch
+src/os/shell/                    Desktop, Taskbar, StartMenu, Window, Toasts, Boot, Icon
+src/os/apps/                     Explorer, Notepad, Terminal, Browser (iframe), Settings, ImageViewer, Welcome
+src/faraday/Faraday.tsx          the app: sidebar (brand, sessions, seal row), hero, transcript, composer
+src/faraday/components/          RoutingChip, SealRow, SovereigntyDrawer, SealBand (+denial notice), Composer, Transcript
+src/faraday/store.ts             sessions, events, seal mirror, drawer state
+src/faraday/turn.ts              classify → score → stream → tool loop
+src/faraday/tools/definitions.js the tool schemas (shared with api/turn.ts)
+src/faraday/tools/execute.ts     the waterfall (ported policy) + tool bodies landing on the OS
+src/faraday/lib/                 router/, egress/policy.js (verbatim from index.js), egress/seal.js,
+                                 deliverables/{audit-trail,docx}.js, registry/fleet.js, trace/turn.js
+```
+
+**Decisions taken with the user at 1 am:**
+- The seal governs the model's **tool calls only**. Model-plane calls are neither gated nor
+  counted; they are disclosed (header pill `Hosted — Anthropic API`, drawer *Model plane* section,
+  the `.docx` audit `Disclosure:` line, the first-run Welcome window, README top).
+- No sandbox: Python is honestly absent from the terminal; the coder lane uses `node -e`, really
+  evaluated in a Web Worker.
+- `budget_tokens` is rejected on Sonnet 5. Thinking is `{type:"adaptive", display:"summarised"}` with
+  `output_config.effort` from `FARADAY_CODER_EFFORT` (default `low`).
+- Sonnet is declared `modalities: [text]` in `fleet.js` as a **routing policy** so the chip's
+  exclusion reason for image turns is real. Comment in the file says so.
+- Cut: fan-out gauge, residency, licence gate, replay provider, GenUI, session persistence.
+
+**Dev loop:** `npm run dev` serves `api/turn.ts` through a Vite middleware (`vite.config.ts`), so the
+whole demo path runs locally with `.env`. `chrome-devtools` MCP drives `http://localhost:5173`.
+
+**Deploy:** Vercel from `main`; set `ANTHROPIC_API_KEY` in the project env. `vercel.json` gives the
+function 60 s and rewrites everything else to `index.html`.
+
 ## Status
 
-- 3 Sep 2026 — prototype copied to `reference/`. `.env.example` and `.gitignore` written.
-  Model plane decided: Anthropic only, Haiku for vision, Sonnet for code, thinking low.
-  Repo created: `RudraO2/AirgappedOS`. **No code written, no plan committed to** — the next
-  session plans first.
+- 3 Sep 2026 01:00 — planned; 02:00 — OS shell + Faraday app + tools + docx built and pushed.
+  Awaiting `ANTHROPIC_API_KEY` in `.env` / Vercel to run the demo path end to end.

@@ -5,7 +5,12 @@ export function AppIcon({ app, size = 32, style }: { app: string; size?: number;
 	const s = { width: size, height: size, flex: "0 0 auto", ...style };
 	switch (app) {
 		case "faraday":
-			return <img src="/favicon.svg" alt="" style={s} draggable={false} />;
+		case "welcome":
+			return (
+				<span style={{ ...s, display: "inline-grid", placeItems: "center", borderRadius: Math.max(4, size * 0.22), background: "#ffffff", border: "1px solid rgba(0,0,0,0.12)" }}>
+					<img src="/favicon.svg" alt="" style={{ width: size * 0.7, height: size * 0.7 }} draggable={false} />
+				</span>
+			);
 		case "explorer":
 			return (
 				<svg viewBox="0 0 32 32" style={s} aria-hidden>

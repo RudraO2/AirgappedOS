@@ -17,7 +17,7 @@ export function RingedMark({ size = 24 }: { size?: number }) {
 					border: sealed ? "1px solid var(--border-l3)" : "1.5px dashed var(--warn-primary)",
 				}}
 			/>
-			<img src="/favicon.svg" alt="" style={{ width: edge, height: edge }} draggable={false} />
+			<img src="/favicon.svg" alt="" className="mark" style={{ width: edge, height: edge }} draggable={false} />
 		</span>
 	);
 }
