@@ -8,12 +8,14 @@ import { recordRoutingDecision } from "./lib/router/dispatch.js";
 import { scoreFleet } from "./lib/router/score.js";
 import { FLEET, memberFor } from "./lib/registry/fleet.js";
 import { clearTurn, recordImages } from "./lib/trace/turn.js";
+import { os } from "../os/kernel/store";
 import { executeTool } from "./tools/execute";
 import { nextTurnId, useFaraday, type Block, type RoutingDecision, type Turn } from "./store";
 
 type Piece =
 	| { type: "text"; text: string }
 	| { type: "thinking"; text: string }
+	| { type: "fallback"; provider: string; model: string; reason: string }
 	| { type: "done"; stop_reason: string; content: Anthropic.ContentBlock[]; usage?: unknown; model?: string }
 	| { type: "error"; message: string };
 
@@ -99,10 +101,15 @@ export async function runTurn(text: string, image?: { base64: string; mediaType:
 		for (let step = 0; step < 8; step += 1) {
 			const api = useFaraday.getState().current().api;
 			let final: Extract<Piece, { type: "done" }> | null = null;
-			for await (const piece of streamTurn({ member, messages: api })) {
+			// Dev hook: window.__forceProvider = "groq" exercises the fallback plane on purpose.
+			const provider = (window as unknown as { __forceProvider?: string }).__forceProvider;
+			for await (const piece of streamTurn({ member, messages: api, provider })) {
 				if (piece.type === "text") appendToLast("text", piece.text);
 				else if (piece.type === "thinking") appendToLast("thinking", piece.text);
-				else if (piece.type === "error") throw new Error(piece.message);
+				else if (piece.type === "fallback") {
+					setTurn(assistantId, (t) => (t.role === "assistant" ? { ...t, via: { provider: piece.provider, model: piece.model, reason: piece.reason } } : t));
+					os.toast({ title: "Model plane fell back.", body: `Anthropic did not answer (${piece.reason}). ${piece.model} via Groq is answering this turn.`, tone: "warning" });
+				} else if (piece.type === "error") throw new Error(piece.message);
 				else if (piece.type === "done") final = piece;
 			}
 			if (!final) throw new Error("the model plane closed the stream without finishing the turn");

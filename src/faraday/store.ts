@@ -17,7 +17,7 @@ export type Block =
 
 export type Turn =
 	| { id: number; role: "user"; text: string; image?: { url: string; mediaType: string } }
-	| { id: number; role: "assistant"; blocks: Block[]; member?: string; error?: string; done: boolean };
+	| { id: number; role: "assistant"; blocks: Block[]; member?: string; error?: string; done: boolean; via?: { provider: string; model: string; reason: string } };
 
 export interface SessionEvent {
 	seq: number;

@@ -55,8 +55,9 @@ function AssistantTurn({ turn }: { turn: Extract<Turn, { role: "assistant" }> })
 				</div>
 			)}
 			{turn.done && !turn.error && turn.member && (
-				<div style={{ fontSize: 11.5, color: "var(--label-tertiary)", display: "flex", gap: 6, alignItems: "center" }}>
-					<StateDot state="done" size={6} /> Answered by {displayFor(turn.member)} · hosted through the Anthropic API
+				<div style={{ fontSize: 11.5, color: turn.via ? "var(--warn-label)" : "var(--label-tertiary)", display: "flex", gap: 6, alignItems: "center" }} title={turn.via ? `Anthropic did not answer: ${turn.via.reason}` : undefined}>
+					<StateDot state={turn.via ? "warning" : "done"} size={6} />
+					{turn.via ? `Answered by ${turn.via.model} via Groq — fallback, the router had picked ${displayFor(turn.member)}` : `Answered by ${displayFor(turn.member)} · hosted through the Anthropic API`}
 				</div>
 			)}
 		</div>
