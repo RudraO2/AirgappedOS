@@ -13,7 +13,7 @@ const STEPS: Step[] = [
 	{ target: "attach", title: "Attach an image", body: "A photo, a nameplate, or a sample P&ID from the menu. Images go to the vision member as pixels.", place: "above" },
 	{ target: "chip", title: "The routing chip", body: "The router classifies each request and picks a model. Click to see the scores and who was filtered out.", place: "above" },
 	{ target: "seal", title: "The seal", body: "Outbound calls are refused before they run and counted here. Click to open the record and the switch.", place: "right" },
-	{ target: "provider", title: "Honest about the fleet", body: "This build answers through hosted Claude models. The real product runs open-weight models offline.", place: "below" },
+	{ target: "provider", title: "Honest about the fleet", body: "This build answers through open-weight models hosted on Groq. The real product runs the same kind of models on its own GPU, offline.", place: "below" },
 ];
 
 const TOUR_KEY = "faraday.tour.done";

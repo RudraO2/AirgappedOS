@@ -15,7 +15,7 @@ import { nextTurnId, useFaraday, type Block, type RoutingDecision, type Turn } f
 type Piece =
 	| { type: "text"; text: string }
 	| { type: "thinking"; text: string }
-	| { type: "fallback"; provider: string; model: string; reason: string }
+	| { type: "fallback"; provider: string; label: string; model: string; reason: string }
 	| { type: "done"; stop_reason: string; content: Anthropic.ContentBlock[]; usage?: unknown; model?: string }
 	| { type: "error"; message: string };
 
@@ -107,8 +107,8 @@ export async function runTurn(text: string, image?: { base64: string; mediaType:
 				if (piece.type === "text") appendToLast("text", piece.text);
 				else if (piece.type === "thinking") appendToLast("thinking", piece.text);
 				else if (piece.type === "fallback") {
-					setTurn(assistantId, (t) => (t.role === "assistant" ? { ...t, via: { provider: piece.provider, model: piece.model, reason: piece.reason } } : t));
-					os.toast({ title: "Model plane fell back.", body: `Anthropic did not answer (${piece.reason}). ${piece.model} via Groq is answering this turn.`, tone: "warning" });
+					setTurn(assistantId, (t) => (t.role === "assistant" ? { ...t, via: { provider: piece.provider, label: piece.label, model: piece.model, reason: piece.reason } } : t));
+					os.toast({ title: "Model plane fell back.", body: `Groq did not answer (${piece.reason}). ${piece.model} via ${piece.label} is answering this turn.`, tone: "warning" });
 				} else if (piece.type === "error") throw new Error(piece.message);
 				else if (piece.type === "done") final = piece;
 			}

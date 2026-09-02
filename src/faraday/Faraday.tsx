@@ -120,9 +120,9 @@ export function Faraday({ args, nonce }: AppProps) {
 
 function ProviderPill() {
 	return (
-		<Pill title="Faraday is answering from the hosted provider: Claude models reached through Anthropic's API. This is the deployable build; the product itself runs open-weight models locally and offline, and says so up front.">
+		<Pill title="Faraday is answering from the hosted provider: open-weight models (GPT-OSS-20B, Qwen3.8-27B) reached through the Groq API, with Gemma 4 on the Gemini API as fallback. This is the deployable build; the product itself runs open-weight models locally and offline, and says so up front.">
 			<StateDot state="done" size={8} />
-			Hosted — Anthropic API
+			Hosted — Groq API
 		</Pill>
 	);
 }

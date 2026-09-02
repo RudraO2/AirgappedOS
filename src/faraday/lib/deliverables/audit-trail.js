@@ -88,7 +88,7 @@ export function buildAuditTrail(context = {}) {
 		);
 		if (dispatch === null) complete = false;
 	} else if (provider === "hosted") {
-		lines.push(`Answered by: ${dispatch.member}, reached as "${dispatch.runtimeId}" through the hosted provider (Anthropic API).`);
+		lines.push(`Answered by: ${dispatch.member}, reached as "${dispatch.runtimeId}" through the hosted provider (Groq API).`);
 	} else {
 		lines.push(`Answered by: ${dispatch.member}, running locally as "${dispatch.runtimeId}" through the ${provider} provider.`);
 	}
@@ -100,7 +100,7 @@ export function buildAuditTrail(context = {}) {
 		// The web build's disclosure, in the artefact rather than only on screen: the
 		// model plane of this build leaves the page. The seal governs the tools, not this.
 		lines.push(
-			"Disclosure: this deployable build answers through a hosted closed model reached over the Anthropic API, so the prompt left the workstation. The product itself runs open-weight models offline; the seal in this build governs the workbench's tools, not its model plane.",
+			"Disclosure: this deployable build answers through hosted open-weight models reached over the Groq API (Gemini API as fallback), so the prompt left the workstation. The product itself runs open-weight models offline; the seal in this build governs the workbench's tools, not its model plane.",
 		);
 	}
 

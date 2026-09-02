@@ -123,9 +123,9 @@ export function SovereigntyDrawer() {
 					<DetailLine>Nothing is resident on this workstation. The fleet of this build is hosted, so there is no GPU memory to report and no eviction to watch.</DetailLine>
 					<DetailLine>The local build reports llama-swap's own <code>/running</code> here — one model at a time on a 4 GB card.</DetailLine>
 				</Disclosure>
-				<Disclosure label="Model plane" summary="hosted — Anthropic API" open={planeOpen} onToggle={() => setPlaneOpen((v) => !v)}>
+				<Disclosure label="Model plane" summary="hosted — Groq API" open={planeOpen} onToggle={() => setPlaneOpen((v) => !v)}>
 					<DetailLine>
-						This deployed build answers through Anthropic's API, so every prompt leaves this page. The seal governs Faraday's tools, not the model plane. The local build runs open-weight models on the box and the seal covers everything; the recorded local run is that proof.
+						This deployed build answers through the Groq API (open-weight GPT-OSS-20B and Qwen3.8-27B; Gemma 4 on the Gemini API if Groq does not answer), so every prompt leaves this page. The seal governs Faraday's tools, not the model plane. The local build runs the same kind of models on the box and the seal covers everything; the recorded local run is that proof.
 					</DetailLine>
 					{routing ? (
 						<DetailLine>
@@ -248,7 +248,7 @@ function exportLedger(sessionId: string, entries: Entry[]) {
 		"Faraday — egress record",
 		`Session: ${sessionId}`,
 		`Exported: ${stamped.toISOString()}`,
-		"Model plane: hosted — Anthropic API",
+		"Model plane: hosted — Groq API (fallback: Gemini API)",
 		`Events: ${entries.length}`,
 		"",
 		"Every line below is one event this session's log recorded. Denials are",

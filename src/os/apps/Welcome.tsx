@@ -18,7 +18,7 @@ export function Welcome({ windowId }: AppProps) {
 				</div>
 			</div>
 			<p style={{ margin: "0 0 8px" }}>
-				<strong>This link is a simulation.</strong> A Windows-style workstation in your browser, with Faraday answering through <strong>hosted Claude models via Anthropic's API</strong> — the only way a public link can answer.
+				<strong>This link is a simulation.</strong> A Windows-style workstation in your browser, with Faraday answering through <strong>hosted open-weight models via the Groq API</strong> — the only way a public link can answer.
 			</p>
 			<p style={{ margin: "0 0 8px" }}>
 				<strong>The real product is air-gapped:</strong> open-weight models on the operator's own GPU, nothing leaves the machine. The router, the seal's refusals and record, and the signed <code>.docx</code> are the same code.

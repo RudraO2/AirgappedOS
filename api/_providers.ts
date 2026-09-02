@@ -1,18 +1,46 @@
 /**
- * The fallback model plane: Groq's OpenAI-compatible endpoint. Used only when
- * Anthropic fails before it has produced anything. Speaks the same NDJSON as
- * the primary path and hands back Anthropic-shaped content blocks, so the
- * browser's tool loop does not know which plane answered — the transcript says.
+ * The model planes, both OpenAI-compatible chat endpoints:
+ *   primary  — Groq      (openai/gpt-oss-20b for coder/calculation, qwen/qwen3.8-27b for vision/document)
+ *   fallback — Gemini API (Gemma 4: gemma-4-26b-a4b-it for coder, gemma-4-31b-it for vision/document)
+ * One streaming client serves both. It speaks the browser's NDJSON and hands
+ * back Anthropic-shaped content blocks, which is the wire shape the browser's
+ * tool loop was written against and keeps working unchanged.
  */
 import type Anthropic from "@anthropic-ai/sdk";
 import { TOOL_DEFINITIONS } from "../src/faraday/tools/definitions.js";
 
-export const GROQ_MODELS = {
-	coder: () => process.env.FARADAY_FALLBACK_CODER ?? "openai/gpt-oss-20b",
-	vision: () => process.env.FARADAY_FALLBACK_VISION ?? "qwen/qwen3.8-27b",
-} as const;
+export type Member = "vision" | "coder";
 
-type Member = keyof typeof GROQ_MODELS;
+export interface Provider {
+	id: "groq" | "gemini";
+	label: string;
+	baseUrl: string;
+	key: string | undefined;
+	models: Record<Member, string>;
+	/** Which lanes may receive image parts on this provider. */
+	imagesOn: Member[];
+}
+
+export function providers(): { primary: Provider; fallback: Provider } {
+	return {
+		primary: {
+			id: "groq",
+			label: "Groq",
+			baseUrl: "https://api.groq.com/openai/v1",
+			key: process.env.GROQ_API_KEY,
+			models: { coder: process.env.FARADAY_MODEL_CODER ?? "openai/gpt-oss-20b", vision: process.env.FARADAY_MODEL_VISION ?? "qwen/qwen3.8-27b" },
+			imagesOn: ["vision"],
+		},
+		fallback: {
+			id: "gemini",
+			label: "Gemini API",
+			baseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
+			key: process.env.GEMINI_API_KEY,
+			models: { coder: process.env.FARADAY_FALLBACK_CODER ?? "gemma-4-26b-a4b-it", vision: process.env.FARADAY_FALLBACK_VISION ?? "gemma-4-31b-it" },
+			imagesOn: ["vision", "coder"],
+		},
+	};
+}
 
 interface OpenAIMessage {
 	role: "system" | "user" | "assistant" | "tool";
@@ -21,7 +49,7 @@ interface OpenAIMessage {
 	tool_call_id?: string;
 }
 
-/** Anthropic messages → OpenAI messages. Thinking blocks are dropped; images become data URLs (or a note when the model cannot see). */
+/** Anthropic messages → OpenAI messages. Thinking blocks are dropped; images become data URLs, or a note when the lane cannot see. */
 function toOpenAI(system: string, messages: Anthropic.MessageParam[], allowImages: boolean): OpenAIMessage[] {
 	const out: OpenAIMessage[] = [{ role: "system", content: system }];
 	for (const m of messages) {
@@ -47,11 +75,10 @@ function toOpenAI(system: string, messages: Anthropic.MessageParam[], allowImage
 					else dropped += 1;
 				}
 			}
-			if (dropped > 0) parts.unshift({ type: "text", text: `[${dropped} attached image${dropped === 1 ? "" : "s"} could not be forwarded to the fallback model, which cannot see. Say so rather than describing it.]` });
+			if (dropped > 0) parts.unshift({ type: "text", text: `[${dropped} attached image${dropped === 1 ? "" : "s"} could not be forwarded to this model, which cannot see. Say so rather than describing it.]` });
 			out.push({ role: "user", content: parts });
 			continue;
 		}
-		// assistant
 		const text = m.content.filter((b): b is Anthropic.TextBlockParam => b.type === "text").map((b) => b.text).join("\n");
 		const calls = m.content
 			.filter((b): b is Anthropic.ToolUseBlockParam => b.type === "tool_use")
@@ -63,54 +90,55 @@ function toOpenAI(system: string, messages: Anthropic.MessageParam[], allowImage
 	return out;
 }
 
-export interface GroqResult {
+export interface TurnResult {
 	stop_reason: "end_turn" | "tool_use";
 	content: Anthropic.ContentBlock[];
 	model: string;
+	provider: Provider["id"];
 }
 
 /**
- * Stream one turn from Groq. `send` receives the same pieces the primary path
- * emits ({type:"text"} / {type:"thinking"}); the return value is the final
- * Anthropic-shaped message for the `done` piece.
+ * Stream one turn from a provider. `send` receives {type:"text"} / {type:"thinking"}
+ * pieces as they arrive; the return value is the final Anthropic-shaped message.
+ * Throws before sending anything if the request is refused, so a caller can fall back cleanly.
  */
-export async function streamGroq(
+export async function streamTurn(
+	provider: Provider,
 	member: Member,
 	system: string,
 	messages: Anthropic.MessageParam[],
 	send: (piece: unknown) => void,
-	options: { signal?: AbortSignal; allowImages?: boolean } = {},
-): Promise<GroqResult> {
-	const key = process.env.GROQ_API_KEY;
-	if (!key) throw new Error("GROQ_API_KEY is not set");
-	const model = GROQ_MODELS[member]();
+	options: { signal?: AbortSignal } = {},
+): Promise<TurnResult> {
+	if (!provider.key) throw new Error(`${provider.label}: no API key configured`);
+	const model = provider.models[member];
 	const body = {
 		model,
 		stream: true,
 		temperature: 0.2,
 		max_tokens: 4096,
-		messages: toOpenAI(system, messages, options.allowImages ?? false),
+		messages: toOpenAI(system, messages, provider.imagesOn.includes(member)),
 		tools: TOOL_DEFINITIONS.map((t) => ({ type: "function", function: { name: t.name, description: t.description, parameters: t.input_schema } })),
 		tool_choice: "auto",
 	};
 	const request = () =>
-		fetch("https://api.groq.com/openai/v1/chat/completions", {
+		fetch(`${provider.baseUrl}/chat/completions`, {
 			method: "POST",
-			headers: { "content-type": "application/json", authorization: `Bearer ${key}` },
+			headers: { "content-type": "application/json", authorization: `Bearer ${provider.key}` },
 			body: JSON.stringify(body),
 			signal: options.signal,
 		});
 	let response = await request();
 	if (response.status === 429) {
-		// Free tier meters tokens per minute; wait the time it names (capped) and try once more.
+		// Free tiers meter tokens per minute; wait the time named (capped) and try once more.
 		const detail = await response.text().catch(() => "");
-		const wait = Math.min(25, Number(/try again in ([\d.]+)s/i.exec(detail)?.[1] ?? 10) + 1);
+		const wait = Math.min(20, Number(/try again in ([\d.]+)s/i.exec(detail)?.[1] ?? 8) + 1);
 		await new Promise((r) => setTimeout(r, wait * 1000));
 		response = await request();
 	}
 	if (!response.ok || !response.body) {
 		const detail = await response.text().catch(() => "");
-		throw new Error(`Groq ${response.status}: ${detail.slice(0, 300)}`);
+		throw new Error(`${provider.label} ${response.status}: ${detail.slice(0, 300)}`);
 	}
 
 	let text = "";
@@ -126,7 +154,12 @@ export async function streamGroq(
 		let json: {
 			choices?: Array<{
 				finish_reason?: string | null;
-				delta?: { content?: string | null; reasoning?: string | null; tool_calls?: Array<{ index: number; id?: string; function?: { name?: string; arguments?: string } }> };
+				delta?: {
+					content?: string | null;
+					reasoning?: string | null;
+					reasoning_content?: string | null;
+					tool_calls?: Array<{ index?: number; id?: string; function?: { name?: string; arguments?: string } }>;
+				};
 			}>;
 		};
 		try {
@@ -136,17 +169,19 @@ export async function streamGroq(
 		}
 		const choice = json.choices?.[0];
 		if (!choice) return;
-		if (choice.delta?.reasoning) send({ type: "thinking", text: choice.delta.reasoning });
+		const reasoning = choice.delta?.reasoning ?? choice.delta?.reasoning_content;
+		if (reasoning) send({ type: "thinking", text: reasoning });
 		if (choice.delta?.content) {
 			text += choice.delta.content;
 			send({ type: "text", text: choice.delta.content });
 		}
 		for (const tc of choice.delta?.tool_calls ?? []) {
-			const slot = calls.get(tc.index) ?? { id: tc.id ?? `groq-call-${tc.index}-${Date.now().toString(36)}`, name: "", args: "" };
+			const index = tc.index ?? calls.size;
+			const slot = calls.get(index) ?? { id: tc.id ?? `call-${index}-${Date.now().toString(36)}`, name: "", args: "" };
 			if (tc.id) slot.id = tc.id;
 			if (tc.function?.name) slot.name = tc.function.name;
 			if (tc.function?.arguments) slot.args += tc.function.arguments;
-			calls.set(tc.index, slot);
+			calls.set(index, slot);
 		}
 		if (choice.finish_reason) finish = choice.finish_reason;
 	};
@@ -173,5 +208,5 @@ export async function streamGroq(
 		}
 		content.push({ type: "tool_use", id: call.id, name: call.name, input } as Anthropic.ToolUseBlock);
 	}
-	return { stop_reason: calls.size > 0 || finish === "tool_calls" ? "tool_use" : "end_turn", content, model };
+	return { stop_reason: calls.size > 0 || finish === "tool_calls" ? "tool_use" : "end_turn", content, model, provider: provider.id };
 }

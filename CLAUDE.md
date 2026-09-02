@@ -188,6 +188,14 @@ src/faraday/lib/                 router/, egress/policy.js (verbatim from index.
                                  deliverables/{audit-trail,docx}.js, registry/fleet.js, trace/turn.js
 ```
 
+**Model plane, changed 3 Sep 2026 ~04:30 at the user's request:** Anthropic is gone. Primary is **Groq**
+(`openai/gpt-oss-20b` coder/calculation, `qwen/qwen3.8-27b` vision/document — it accepts images);
+fallback is the **Gemini API** with Gemma 4 (`gemma-4-26b-a4b-it` coder, `gemma-4-31b-it` vision), used
+only when Groq fails before producing anything, announced by a `fallback` piece, toast, and transcript
+footer. Both are OpenAI-compatible chat endpoints served by one client, `api/_providers.ts`. Both get
+the lean prompt (free tiers meter tokens per minute; Groq: 8000 TPM). Every "Hosted — Anthropic API"
+disclosure became "Hosted — Groq API".
+
 **Decisions taken with the user at 1 am:**
 - The seal governs the model's **tool calls only**. Model-plane calls are neither gated nor
   counted; they are disclosed (header pill `Hosted — Anthropic API`, drawer *Model plane* section,

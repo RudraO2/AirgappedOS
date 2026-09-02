@@ -39,7 +39,7 @@ export function Settings(_: AppProps) {
 					<div style={{ color: "var(--label-secondary)", lineHeight: 1.6 }}>
 						MRPL-WS-0417 · Operator account · Sovereign build.
 						<br />
-						This is a simulated workstation running in a browser so that Faraday can be shown at a link. Faraday's model plane in this build is hosted through Anthropic's API and says so on screen; the product itself runs open-weight models offline.
+						This is a simulated workstation running in a browser so that Faraday can be shown at a link. Faraday's model plane in this build is hosted through the Groq API (Gemini API as fallback) and says so on screen; the product itself runs the same kind of models offline.
 					</div>
 				</section>
 			</div>

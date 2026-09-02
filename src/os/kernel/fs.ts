@@ -180,7 +180,7 @@ export function seedFs(): VirtualFs {
 	);
 	fs.write(
 		"C:\\Program Files\\Faraday\\ABOUT.txt",
-		"Faraday - a sovereign industrial knowledge-work workbench.\r\nThis deployable build reaches hosted Claude models through Anthropic's API; the product itself runs open-weight models offline.\r\n",
+		"Faraday - a sovereign industrial knowledge-work workbench.\r\nThis deployable build reaches hosted open-weight models through the Groq API; the product itself runs the same kind of models offline.\r\n",
 	);
 	return fs;
 }

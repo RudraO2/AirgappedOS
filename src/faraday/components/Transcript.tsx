@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { downloadNode } from "../../os/apps/Explorer";
 import { useOS } from "../../os/kernel/store";
-import { displayFor } from "../lib/registry/fleet.js";
+import { displayFor, PLANE_LABEL } from "../lib/registry/fleet.js";
 import { useFaraday, type Block, type Turn } from "../store";
 import { StateDot } from "./ui";
 
@@ -55,9 +55,9 @@ function AssistantTurn({ turn }: { turn: Extract<Turn, { role: "assistant" }> })
 				</div>
 			)}
 			{turn.done && !turn.error && turn.member && (
-				<div style={{ fontSize: 11.5, color: turn.via ? "var(--warn-label)" : "var(--label-tertiary)", display: "flex", gap: 6, alignItems: "center" }} title={turn.via ? `Anthropic did not answer: ${turn.via.reason}` : undefined}>
+				<div style={{ fontSize: 11.5, color: turn.via ? "var(--warn-label)" : "var(--label-tertiary)", display: "flex", gap: 6, alignItems: "center" }} title={turn.via ? `Groq did not answer: ${turn.via.reason}` : undefined}>
 					<StateDot state={turn.via ? "warning" : "done"} size={6} />
-					{turn.via ? `Answered by ${turn.via.model} via Groq — fallback, the router had picked ${displayFor(turn.member)}` : `Answered by ${displayFor(turn.member)} · hosted through the Anthropic API`}
+					{turn.via ? `Answered by ${turn.via.model} via ${turn.via.label} — fallback, the router had picked ${displayFor(turn.member)}` : `Answered by ${displayFor(turn.member)} · hosted through the ${PLANE_LABEL}`}
 				</div>
 			)}
 		</div>
@@ -78,7 +78,7 @@ function Thinking({ text }: { text: string }) {
 				<span aria-hidden style={{ display: "inline-block", transform: open ? "rotate(90deg)" : "none", transition: "transform 120ms ease", fontSize: 10 }}>
 					{"▸"}
 				</span>
-				Reasoning · summarised extended thinking
+				Reasoning
 			</button>
 			{open && <div style={{ marginTop: 6, paddingLeft: 16, borderLeft: "2px solid var(--border-l2)", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{text}</div>}
 		</div>
