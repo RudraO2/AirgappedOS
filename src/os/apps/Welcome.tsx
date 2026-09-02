@@ -41,7 +41,7 @@ export function Welcome({ windowId }: AppProps) {
 					autoFocus
 					onClick={() => {
 						closeWindow(windowId);
-						launch("faraday");
+						launch("faraday", { tour: true });
 					}}
 					style={{ padding: "10px 28px", borderRadius: 6, background: "var(--accent)", color: "var(--accent-label)", fontWeight: 600, fontSize: 14 }}
 				>

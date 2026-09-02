@@ -36,6 +36,7 @@ export function SealRow() {
 	return (
 		<div style={{ borderTop: "1px solid var(--border-l1)", paddingTop: 8, marginTop: 4, width: "100%" }}>
 			<button
+				data-tour="seal"
 				onClick={toggleDrawer}
 				title={title}
 				aria-label={title}

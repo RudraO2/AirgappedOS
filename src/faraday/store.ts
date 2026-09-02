@@ -62,6 +62,7 @@ interface FaradayState {
 	busy: boolean;
 	pendingImage: PendingImage | null;
 	previewImage: string | null;
+	tourStep: number | null;
 	lastDenial: { seq: number; tool: string; target: string; at: number } | null;
 	current(): Session;
 	newSession(): void;
@@ -75,6 +76,7 @@ interface FaradayState {
 	setBusy(v: boolean): void;
 	setPendingImage(img: PendingImage | null): void;
 	setPreviewImage(url: string | null): void;
+	setTourStep(step: number | null): void;
 	clearDenial(): void;
 }
 
@@ -116,6 +118,7 @@ export const useFaraday = create<FaradayState>((set, get) => ({
 	busy: false,
 	pendingImage: null,
 	previewImage: null,
+	tourStep: null,
 	lastDenial: null,
 	current: () => {
 		const s = get();
@@ -162,6 +165,7 @@ export const useFaraday = create<FaradayState>((set, get) => ({
 	setBusy: (v) => set({ busy: v }),
 	setPendingImage: (img) => set({ pendingImage: img }),
 	setPreviewImage: (url) => set({ previewImage: url }),
+	setTourStep: (step) => set({ tourStep: step }),
 	clearDenial: () => set({ lastDenial: null }),
 }));
 

@@ -1,8 +1,10 @@
+import { useEffect, useRef } from "react";
 import type { AppProps } from "../os/kernel/apps";
 import { launch } from "../os/kernel/launch";
 import { Hero, RingedMark, Wordmark } from "./components/Brand";
 import { Composer, SuggestedPrompts } from "./components/Composer";
 import { ImagePreview } from "./components/ImagePreview";
+import { Tour, tourSeen } from "./components/Tour";
 import { Overlays } from "./components/SealBand";
 import { SealRow } from "./components/SealRow";
 import { SovereigntyDrawer } from "./components/SovereigntyDrawer";
@@ -10,7 +12,16 @@ import { Transcript } from "./components/Transcript";
 import { Pill, StateDot } from "./components/ui";
 import { egressSnapshot, useFaraday } from "./store";
 
-export function Faraday(_: AppProps) {
+export function Faraday({ args, nonce }: AppProps) {
+	const rootRef = useRef<HTMLDivElement>(null);
+	const setTourStep = useFaraday((s) => s.setTourStep);
+	useEffect(() => {
+		// The Welcome window launches with { tour: true }; the tour is shown once per browser.
+		if (args?.tour === true && !tourSeen()) {
+			const t = setTimeout(() => setTourStep(0), 500);
+			return () => clearTimeout(t);
+		}
+	}, [args?.tour, nonce, setTourStep]);
 	const sessions = useFaraday((s) => s.sessions);
 	const currentId = useFaraday((s) => s.currentId);
 	const selectSession = useFaraday((s) => s.selectSession);
@@ -22,7 +33,7 @@ export function Faraday(_: AppProps) {
 	const egress = egressSnapshot(session);
 
 	return (
-		<div style={{ position: "absolute", inset: 0, display: "flex", background: "var(--bg-layer-1)", color: "var(--label-primary)", fontSize: 13 }}>
+		<div ref={rootRef} style={{ position: "absolute", inset: 0, display: "flex", background: "var(--bg-layer-1)", color: "var(--label-primary)", fontSize: 13 }}>
 			<aside style={{ width: 280, flex: "0 0 auto", borderRight: "1px solid var(--border-l1)", background: "var(--bg-layer-2)", display: "flex", flexDirection: "column", padding: 14 }}>
 				<div style={{ display: "flex", alignItems: "center", gap: 10, padding: "4px 2px 14px" }}>
 					<RingedMark size={26} />
@@ -84,7 +95,7 @@ export function Faraday(_: AppProps) {
 								<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden><path d="M3 12.5c0-3 2.2-5.5 5-5.5s5 2.5 5 5.5M8 7a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z" fill="none" stroke="currentColor" strokeWidth="1.2" /></svg>
 								Document
 							</span>
-							<span style={{ marginLeft: "auto" }}>
+							<span style={{ marginLeft: "auto" }} data-tour="provider">
 								<ProviderPill />
 							</span>
 						</div>
@@ -102,6 +113,7 @@ export function Faraday(_: AppProps) {
 				<SovereigntyDrawer />
 				<ImagePreview />
 			</main>
+			<Tour rootRef={rootRef} />
 		</div>
 	);
 }

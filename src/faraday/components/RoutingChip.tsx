@@ -33,7 +33,7 @@ export function RoutingChip({ locked }: { locked: boolean }) {
 		: "The router picks a fleet member from its classifier score once the first turn runs.";
 
 	return (
-		<div ref={ref} style={{ position: "relative" }}>
+		<div ref={ref} data-tour="chip" style={{ position: "relative" }}>
 			<Pill onClick={canOpen ? () => setOpen((v) => !v) : undefined} active={open} title={title} disabled={locked} aria-haspopup="menu" aria-expanded={open}>
 				{selected && <StateDot state="done" size={8} />}
 				{selected ? displayFor(selected) : "Auto-routing"}

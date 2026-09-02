@@ -66,6 +66,7 @@ export function Composer({ hero }: { hero: boolean }) {
 
 	return (
 		<div
+			data-tour="composer"
 			onPaste={(e) => {
 				const item = [...e.clipboardData.items].find((i) => i.type.startsWith("image/"));
 				if (item) {
@@ -129,6 +130,7 @@ export function Composer({ hero }: { hero: boolean }) {
 			<div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
 				<div ref={menuRef} style={{ position: "relative" }}>
 					<button
+						data-tour="attach"
 						aria-label="Attach an image, or run a command"
 						title="Attach an image, or run a command"
 						onClick={() => setMenuOpen((v) => !v)}
