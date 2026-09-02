@@ -22,8 +22,8 @@ export function ImagePreview() {
 			onClick={() => setPreviewImage(null)}
 			style={{ position: "absolute", inset: 0, zIndex: 60, background: "rgba(0,0,0,0.55)", display: "grid", placeItems: "center", padding: 32 }}
 		>
-			<div onClick={(e) => e.stopPropagation()} style={{ position: "relative", maxWidth: "88%", maxHeight: "88%", background: "var(--bg-layer-1)", borderRadius: 12, padding: 10, boxShadow: "var(--shadow-window)", border: "1px solid var(--border-l2)" }}>
-				<img src={url} alt="Attached image" style={{ display: "block", maxWidth: "100%", maxHeight: "calc(88vh - 120px)", objectFit: "contain", borderRadius: 6, background: "#ffffff" }} />
+			<div onClick={(e) => e.stopPropagation()} style={{ position: "relative", maxWidth: "90%", maxHeight: "90%", display: "flex", flexDirection: "column", background: "var(--bg-layer-1)", borderRadius: 12, padding: 10, boxShadow: "var(--shadow-window)", border: "1px solid var(--border-l2)" }}>
+				<img src={url} alt="Attached image" style={{ display: "block", flex: "1 1 auto", minHeight: 0, maxWidth: "100%", objectFit: "contain", borderRadius: 6, background: "#ffffff" }} />
 				<button
 					onClick={() => setPreviewImage(null)}
 					aria-label="Close preview"
