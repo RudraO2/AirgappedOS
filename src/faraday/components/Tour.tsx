@@ -91,7 +91,7 @@ export function Tour({ rootRef }: { rootRef: RefObject<HTMLDivElement> }) {
 		const cx = rect.x + rect.w / 2;
 		if (current.place === "above") bubble = { left: Math.max(12, Math.min(cx - bubbleW / 2, (rootRef.current?.clientWidth ?? 1000) - bubbleW - 12)), top: rect.y - pad - 12, transform: "translateY(-100%)" };
 		else if (current.place === "below") bubble = { left: Math.max(12, Math.min(cx - bubbleW / 2, (rootRef.current?.clientWidth ?? 1000) - bubbleW - 12)), top: rect.y + rect.h + pad + 12 };
-		else if (current.place === "right") bubble = { left: rect.x + rect.w + pad + 12, top: rect.y + rect.h / 2, transform: "translateY(-100%)" };
+		else if (current.place === "right") bubble = { left: rect.x + rect.w + pad + 12, top: rect.y + rect.h / 2, transform: "translateY(-50%)" };
 		else bubble = { left: rect.x - pad - 12, top: rect.y + rect.h / 2, transform: "translate(-100%, -50%)" };
 	} else {
 		bubble = { left: "50%", top: "50%", transform: "translate(-50%, -50%)" };
