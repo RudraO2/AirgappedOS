@@ -1,13 +1,14 @@
 # Faraday Web — the deployable link
 
-> **What you are looking at.** This link runs Faraday inside a simulated Windows-style workstation
-> in your browser. The models behind it are **Claude Haiku 4.5 and Claude Sonnet 5, reached through
-> Anthropic's API** — closed-weight, hosted — because that is the only way a public link can answer at
-> all. The real product runs **open-weight models on the operator's own GPU, fully offline**; the
-> recorded local run is that proof. Everything else here is the same code path: the router really
-> classifies and scores, the seal really refuses the workbench's outbound tool calls before they run
-> and records each one, and the approval note is a real `.docx`. What is simulated is the fleet and
-> the machine — and this notice says so up front.
+> **This link is a simulation.** A Windows-style workstation in your browser, with Faraday running
+> inside it on **hosted Claude models (Haiku 4.5, Sonnet 5) through Anthropic's API** — the only way a
+> public link can answer. **The real product is air-gapped**: open-weight models on the operator's own
+> GPU, nothing leaves the machine. The router, the seal's refusals and record, and the signed `.docx`
+> are the same code; only the fleet and the machine are simulated.
+>
+> **Run the real one locally:** https://github.com/RudraO2/blind-flange — Windows 10/11 64-bit,
+> NVIDIA GPU with 4 GB VRAM (built on a GTX 1650 Max-Q, Vulkan, no CUDA), 16 GB RAM, ~4 GB disk for
+> the two Apache-2.0 Qwen models, Node 22.15+, pnpm 10.11+. Clone, double-click `run.bat`.
 
 Smart India Hackathon 2026 · **SIH26117** · Mangalore Refinery and Petrochemicals Limited.
 The Phase 0 prototype (a DeepSeek Harness plugin running local models) is in `reference/`, untouched.

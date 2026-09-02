@@ -20,7 +20,7 @@ registerApp({ id: "browser", title: "Browser", component: Browser, w: 1000, h: 6
 registerApp({ id: "notepad", title: "Notepad", component: Notepad, w: 720, h: 520, desktop: true });
 registerApp({ id: "settings", title: "Settings", component: Settings, w: 760, h: 520, singleton: true, pinned: true });
 registerApp({ id: "viewer", title: "Photos", component: ImageViewer, w: 760, h: 560 });
-registerApp({ id: "welcome", title: "What you are looking at", component: Welcome, w: 660, h: 600, singleton: true });
+registerApp({ id: "welcome", title: "What you are looking at", component: Welcome, w: 680, h: 620, singleton: true });
 
 export default function App() {
 	const theme = useOS((s) => s.theme);

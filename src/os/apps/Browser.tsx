@@ -3,7 +3,7 @@ import type { AppProps } from "../kernel/apps";
 import { HOME_URL, useBrowser } from "../kernel/browser";
 import { useOS } from "../kernel/store";
 
-export function Browser({ windowId, nonce }: AppProps) {
+export function Browser({ windowId, nonce, args }: AppProps) {
 	const { tabs, active, openTab, closeTab, setActive, navigate, back, forward, reload } = useBrowser();
 	const setTitle = useOS((s) => s.setTitle);
 	const tab = tabs.find((t) => t.id === active) ?? null;
@@ -12,6 +12,10 @@ export function Browser({ windowId, nonce }: AppProps) {
 	useEffect(() => {
 		if (tabs.length === 0) openTab();
 	}, [tabs.length, openTab, nonce]);
+	useEffect(() => {
+		// Launched with a URL (from the Welcome window or a tool): open it in a new tab.
+		if (typeof args?.url === "string" && args.url !== "") openTab(args.url);
+	}, [args?.url, nonce, openTab]);
 	useEffect(() => {
 		// Links clicked inside a relayed page ask the browser to navigate the tab.
 		const onMessage = (e: MessageEvent) => {
