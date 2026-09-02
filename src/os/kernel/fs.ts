@@ -117,11 +117,11 @@ export class VirtualFs {
 
 	/** Find a file by name anywhere on the drive (case-insensitive), for callers that only know the name. */
 	find(name: string): string | null {
-		const wanted = name.toLowerCase().replace(/^.*[\/]/, "");
+		const wanted = name.toLowerCase().replace(/^.*[\\/]/, "");
 		const walk = (node: FsNode, prefix: string): string | null => {
 			if (node.kind !== "dir") return null;
 			for (const child of node.children.values()) {
-				const full = prefix === "C:\\" ? `C:\${child.name}` : `${prefix}\${child.name}`;
+				const full = prefix === "C:\\" ? `C:\\${child.name}` : `${prefix}\\${child.name}`;
 				if (child.kind === "file" && child.name.toLowerCase() === wanted) return full;
 				if (child.kind === "dir") {
 					const hit = walk(child, full);
