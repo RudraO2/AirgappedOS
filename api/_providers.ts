@@ -147,6 +147,47 @@ export async function streamTurn(
 	const reader = response.body.getReader();
 	const decoder = new TextDecoder();
 	let buffer = "";
+
+	// Gemma writes its reasoning inline as <thought>…</thought>. Route that to the
+	// thinking stream and keep it out of the answer, across chunk boundaries.
+	const OPEN = "<thought>";
+	const CLOSE = "</thought>";
+	let mode: "text" | "thought" = "text";
+	let pending = "";
+	const partialTail = (s: string, tag: string) => {
+		for (let n = Math.min(tag.length - 1, s.length); n > 0; n -= 1) if (tag.startsWith(s.slice(-n))) return n;
+		return 0;
+	};
+	const emitContent = (delta: string, final = false) => {
+		pending += delta;
+		while (pending.length > 0) {
+			const tag = mode === "text" ? OPEN : CLOSE;
+			const idx = pending.indexOf(tag);
+			if (idx >= 0) {
+				const before = pending.slice(0, idx);
+				if (before) {
+					if (mode === "text") {
+						text += before;
+						send({ type: "text", text: before });
+					} else send({ type: "thinking", text: before });
+				}
+				pending = pending.slice(idx + tag.length);
+				mode = mode === "text" ? "thought" : "text";
+				continue;
+			}
+			const hold = final ? 0 : partialTail(pending, tag);
+			const out = pending.slice(0, pending.length - hold);
+			pending = pending.slice(pending.length - hold);
+			if (out) {
+				if (mode === "text") {
+					text += out;
+					send({ type: "text", text: out });
+				} else send({ type: "thinking", text: out });
+			}
+			break;
+		}
+	};
+
 	const handle = (line: string) => {
 		if (!line.startsWith("data:")) return;
 		const payload = line.slice(5).trim();
@@ -171,10 +212,7 @@ export async function streamTurn(
 		if (!choice) return;
 		const reasoning = choice.delta?.reasoning ?? choice.delta?.reasoning_content;
 		if (reasoning) send({ type: "thinking", text: reasoning });
-		if (choice.delta?.content) {
-			text += choice.delta.content;
-			send({ type: "text", text: choice.delta.content });
-		}
+		if (choice.delta?.content) emitContent(choice.delta.content);
 		for (const tc of choice.delta?.tool_calls ?? []) {
 			const index = tc.index ?? calls.size;
 			const slot = calls.get(index) ?? { id: tc.id ?? `call-${index}-${Date.now().toString(36)}`, name: "", args: "" };
@@ -196,6 +234,8 @@ export async function streamTurn(
 		}
 	}
 	if (buffer.trim()) handle(buffer.trim());
+	emitContent("", true);
+	text = text.trim();
 
 	const content: Anthropic.ContentBlock[] = [];
 	if (text) content.push({ type: "text", text, citations: null } as Anthropic.TextBlock);

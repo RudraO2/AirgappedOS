@@ -50,7 +50,12 @@ export default async function handler(req: Request): Promise<Response> {
 				controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
 			};
 			const run = async (p: typeof primary) => {
-				const result = await streamTurn(p, member, system, messages, send);
+				// The fallback model must not repeat the primary's identity line.
+				const prompt =
+					p.id === fallback.id
+						? `${system}\n\nNOTE: You are the fallback plane for this turn — ${p.models[member]} on the ${p.label} — because Groq did not answer. If asked which model is answering, say that.`
+						: system;
+				const result = await streamTurn(p, member, prompt, messages, send);
 				send({ type: "done", stop_reason: result.stop_reason, content: result.content, model: result.model, provider: result.provider });
 			};
 			try {
