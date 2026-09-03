@@ -3,6 +3,7 @@ import { downloadNode } from "../../os/apps/Explorer";
 import { useOS } from "../../os/kernel/store";
 import { displayFor, PLANE_LABEL } from "../lib/registry/fleet.js";
 import { useFaraday, type Block, type Turn } from "../store";
+import { Markdown } from "./Markdown";
 import { StateDot } from "./ui";
 
 export function Transcript({ turns }: { turns: Turn[] }) {
@@ -65,7 +66,7 @@ function AssistantTurn({ turn }: { turn: Extract<Turn, { role: "assistant" }> })
 }
 
 function BlockView({ block }: { block: Block }) {
-	if (block.type === "text") return <div style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{block.text}</div>;
+	if (block.type === "text") return <Markdown text={block.text} />;
 	if (block.type === "thinking") return <Thinking text={block.text} />;
 	return <ToolRow block={block} />;
 }
