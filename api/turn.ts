@@ -19,7 +19,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import { systemPromptFor } from "./_prompts";
 import { providers, streamTurn, type Member } from "./_providers";
 
-export default async function handler(req: Request): Promise<Response> {
+async function handler(req: Request): Promise<Response> {
 	if (req.method !== "POST") {
 		return new Response(JSON.stringify({ error: "POST only" }), { status: 405, headers: { "content-type": "application/json" } });
 	}
@@ -96,3 +96,7 @@ export default async function handler(req: Request): Promise<Response> {
 		},
 	});
 }
+
+/** Vercel reads a default-exported *function* as the Node (req, res) signature; the
+ *  `{ fetch }` object is what selects the web-standard Request/Response handler. */
+export default { fetch: handler };

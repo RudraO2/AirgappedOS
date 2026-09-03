@@ -43,7 +43,7 @@ function blocked(target: URL, reason: string): Response {
 	return new Response(html, { status: 200, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 }
 
-export default async function handler(req: Request): Promise<Response> {
+async function handler(req: Request): Promise<Response> {
 	const target = parseTarget(new URL(req.url).searchParams.get("url"));
 	if (!target) return new Response("url must be an absolute http(s) address on the public web", { status: 400 });
 	const controller = new AbortController();
@@ -83,3 +83,7 @@ export default async function handler(req: Request): Promise<Response> {
 		clearTimeout(timer);
 	}
 }
+
+/** Vercel reads a default-exported *function* as the Node (req, res) signature; the
+ *  `{ fetch }` object is what selects the web-standard Request/Response handler. */
+export default { fetch: handler };

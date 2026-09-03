@@ -24,7 +24,8 @@ function devApi(env: Record<string, string>): Plugin {
 						headers: req.headers as Record<string, string>,
 						body: chunks.length ? Buffer.concat(chunks) : undefined,
 					});
-					const response: Response = await mod.default(request);
+					const entry = mod.default;
+					const response: Response = await (typeof entry === "function" ? entry(request) : entry.fetch(request));
 					res.statusCode = response.status;
 					response.headers.forEach((v, k) => res.setHeader(k, v));
 					if (!response.body) return res.end();
