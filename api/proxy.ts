@@ -6,7 +6,7 @@
  * origin's JavaScript (WhatsApp Web, Gmail) will not work through any relay;
  * the page says so instead of showing a blank frame.
  */
-import { fetchLikeABrowser, parseTarget } from "./_relay";
+import { fetchLikeABrowser, parseTarget } from "./_relay.js";
 
 const STRIP = ["content-security-policy", "content-security-policy-report-only", "x-frame-options", "content-encoding", "content-length", "transfer-encoding", "set-cookie", "strict-transport-security"];
 

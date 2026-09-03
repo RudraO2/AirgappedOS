@@ -16,8 +16,8 @@
  *   { type: "error", message }
  */
 import type Anthropic from "@anthropic-ai/sdk";
-import { systemPromptFor } from "./_prompts";
-import { providers, streamTurn, type Member } from "./_providers";
+import { systemPromptFor } from "./_prompts.js";
+import { providers, streamTurn, type Member } from "./_providers.js";
 
 async function handler(req: Request): Promise<Response> {
 	if (req.method !== "POST") {

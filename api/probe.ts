@@ -3,7 +3,7 @@
  * browser asks before it decides between a direct iframe (the request leaves
  * the judge's own tab) and the page relay (`proxy.ts`).
  */
-import { fetchLikeABrowser, json, parseTarget, refusesFraming } from "./_relay";
+import { fetchLikeABrowser, json, parseTarget, refusesFraming } from "./_relay.js";
 
 async function handler(req: Request): Promise<Response> {
 	const target = parseTarget(new URL(req.url).searchParams.get("url"));
