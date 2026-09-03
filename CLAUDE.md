@@ -218,3 +218,10 @@ function 60 s and rewrites everything else to `index.html`.
 
 - 3 Sep 2026 01:00 — planned; 02:00 — OS shell + Faraday app + tools + docx built and pushed.
   Awaiting `ANTHROPIC_API_KEY` in `.env` / Vercel to run the demo path end to end.
+- 3 Sep 2026 06:30 — **live**: https://faraday-five.vercel.app (Vercel project `faraday`).
+  Two deploy faults fixed: Vercel Authentication was on for all deployments (a judge hit a
+  login wall) — now off; and every `api/` function 500'd with `FUNCTION_INVOCATION_FAILED`
+  because the package is ESM and Vercel ships `api/` unbundled, so extensionless sibling
+  imports (`./_relay`) did not resolve. Relative imports in `api/*.ts` now carry `.js`.
+  Handlers also export as `{ fetch }` — a default-exported *function* is read as the legacy
+  `(req, res)` signature. `/api/probe` and `/api/turn` verified against production.
